@@ -1,0 +1,22 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic-settings==2.4.0
+pydantic[email]
+
+# БД
+sqlalchemy==2.0.35
+asyncpg==0.29.0
+alembic==1.13.3
+
+# Auth
+bcrypt==4.2.0
+python-jose[cryptography]==3.3.0
+
+# Redis
+redis==5.1.0
+
+# MinIO
+minio==7.2.9
+
+# Утилиты
+python-multipart==0.0.12

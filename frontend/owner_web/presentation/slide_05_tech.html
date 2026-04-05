@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Migom - Техническая реализация</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+.slide{width:1920px;height:1080px;overflow:hidden;position:relative;background:#0F1117;font-family:'Inter',sans-serif;color:#E2E8F0;padding:80px 100px}
+.tag{display:inline-block;font-size:14px;font-weight:600;color:#4ADE80;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px}
+h1{font-family:'Montserrat',sans-serif;font-size:52px;font-weight:700;letter-spacing:-1.5px;color:#fff;margin-bottom:16px}
+.sub{font-size:22px;color:#8896A7;margin-bottom:56px}
+/* services row */
+.services{display:flex;gap:28px;margin-bottom:48px}
+.service{flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:36px 32px;position:relative;overflow:hidden}
+.service::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.svc-green::before{background:#4ADE80}
+.svc-blue::before{background:#38B2AC}
+.svc-purple::before{background:#805AD5}
+.service h3{font-family:'Montserrat',sans-serif;font-size:20px;font-weight:700;color:#fff;margin-bottom:6px}
+.service .tech{font-size:14px;color:#4ADE80;font-weight:600;margin-bottom:14px}
+.service p{font-size:17px;color:#8896A7;line-height:1.55}
+/* infra */
+.infra{display:flex;gap:20px;flex-wrap:wrap}
+.infra-chip{display:flex;align-items:center;gap:10px;padding:14px 24px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px}
+.infra-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.infra-chip span{font-size:16px;color:#E2E8F0;font-weight:600}
+.infra-chip small{font-size:14px;color:#718096}
+.d1{background:#4ADE80}
+.d2{background:#38B2AC}
+.d3{background:#ED8936}
+.d4{background:#805AD5}
+.d5{background:#EF4444}
+.infra-label{font-size:14px;font-weight:600;color:#4ADE80;text-transform:uppercase;letter-spacing:2px;margin-bottom:20px}
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="tag">Слайд 5</div>
+  <h1>Техническая реализация</h1>
+  <div class="sub">Микросервисная архитектура</div>
+
+  <div class="services">
+    <div class="service svc-green">
+      <h3>Business Service</h3>
+      <div class="tech">Python / FastAPI</div>
+      <p>Управление пользователями, меню ресторанов, точками продаж и ролями</p>
+    </div>
+
+    <div class="service svc-blue">
+      <h3>Delivery Service</h3>
+      <div class="tech">Python / FastAPI</div>
+      <p>Корзина, заказы, маршрутизация курьеров по гео-координатам через PostGIS. Отправка событий в Kafka</p>
+    </div>
+
+    <div class="service svc-purple">
+      <h3>Realtime Service</h3>
+      <div class="tech">Go</div>
+      <p>WebSocket-хаб для рассылки событий клиентам с минимальным потреблением памяти (read-only)</p>
+    </div>
+  </div>
+
+  <div class="infra-label">Инфраструктура</div>
+  <div class="infra">
+    <div class="infra-chip"><div class="infra-dot d1"></div><span>PostgreSQL + PostGIS</span><small>Хранение и гео-запросы</small></div>
+    <div class="infra-chip"><div class="infra-dot d2"></div><span>Redis</span><small>Кэш, токены, бронь офферов</small></div>
+    <div class="infra-chip"><div class="infra-dot d3"></div><span>Kafka</span><small>Асинхронная коммуникация</small></div>
+    <div class="infra-chip"><div class="infra-dot d4"></div><span>MinIO</span><small>Хранение файлов</small></div>
+    <div class="infra-chip"><div class="infra-dot d5"></div><span>Nginx</span><small>API Gateway</small></div>
+  </div>
+</div>
+</body>
+</html>

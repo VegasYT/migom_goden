@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Migom - Проблема</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+.slide{width:1920px;height:1080px;overflow:hidden;position:relative;background:#F7FAFC;font-family:'Inter',sans-serif;color:#1A202C;padding:80px 100px}
+.tag{display:inline-block;font-size:14px;font-weight:600;color:#4ADE80;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px}
+h1{font-family:'Montserrat',sans-serif;font-size:52px;font-weight:700;letter-spacing:-1.5px;color:#0F1117;margin-bottom:20px}
+.sub{font-size:22px;color:#718096;max-width:900px;line-height:1.6;margin-bottom:60px}
+.cards{display:flex;gap:40px;margin-bottom:60px}
+.card{flex:1;background:#fff;border-radius:20px;padding:48px 40px;box-shadow:0 4px 24px rgba(0,0,0,.06);border:1px solid #E2E8F0;display:flex;flex-direction:column;gap:20px}
+.card-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.card-icon svg{width:28px;height:28px}
+.icon-red{background:rgba(239,68,68,.1);color:#EF4444}
+.icon-orange{background:rgba(237,137,54,.1);color:#ED8936}
+.card h3{font-family:'Montserrat',sans-serif;font-size:24px;font-weight:700;color:#0F1117}
+.card p{font-size:20px;color:#718096;line-height:1.6}
+.metric-bar{display:flex;align-items:center;gap:40px;padding:36px 48px;background:#0F1117;border-radius:20px}
+.metric-num{font-family:'Montserrat',sans-serif;font-size:64px;font-weight:700;color:#4ADE80;line-height:1}
+.metric-text{font-size:20px;color:#8896A7;line-height:1.5}
+.metric-text strong{color:#fff}
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="tag">Слайд 2</div>
+  <h1>Проблема и цель решения</h1>
+  <div class="sub">Высокий спрос на доставку сочетается с высокой стоимостью запуска собственной курьерской службы</div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon icon-red">
+        <!-- Lucide: alert-triangle -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      </div>
+      <h3>Проблема</h3>
+      <p>Высокий спрос на доставку сочетается с высокой стоимостью запуска собственной курьерской службы. Недостаточная насыщенность рынка формирует потенциал для новых проектов.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon icon-orange">
+        <!-- Lucide: target -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      </div>
+      <h3>Цель</h3>
+      <p>Создать современную платформу доставки, которая мгновенно и автоматически связывает покупателя, ресторан и курьера через push-систему с учётом радиуса и геопозиции.</p>
+    </div>
+  </div>
+
+  <div class="metric-bar">
+    <div class="metric-num">Push</div>
+    <div class="metric-text">
+      <strong>Ядро решения - push-система предложения заказа</strong><br>
+      Учитывает радиус и геопозицию курьера для мгновенного назначения ближайшего доступного курьера
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ru">
+	<head>
+		<meta charset="UTF-8" />
+		<title>Migom - Сценарии</title>
+		<link
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Montserrat:wght@600;700&display=swap"
+			rel="stylesheet"
+		/>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+			.slide {
+				width: 1920px;
+				height: 1080px;
+				overflow: hidden;
+				position: relative;
+				background: #f7fafc;
+				font-family: 'Inter', sans-serif;
+				color: #1a202c;
+				padding: 80px 100px;
+			}
+			.tag {
+				display: inline-block;
+				font-size: 14px;
+				font-weight: 600;
+				color: #4ade80;
+				text-transform: uppercase;
+				letter-spacing: 2px;
+				margin-bottom: 16px;
+			}
+			h1 {
+				font-family: 'Montserrat', sans-serif;
+				font-size: 52px;
+				font-weight: 700;
+				letter-spacing: -1.5px;
+				color: #0f1117;
+				margin-bottom: 60px;
+			}
+			.scenarios {
+				display: flex;
+				gap: 36px;
+				align-items: flex-start;
+			}
+			.scenario {
+				flex: 1;
+				background: #fff;
+				border-radius: 24px;
+				padding: 44px 40px;
+				box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+				border: 1px solid #e2e8f0;
+				position: relative;
+				overflow: hidden;
+			}
+			.scenario::before {
+				content: '';
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				height: 5px;
+			}
+			.s1::before {
+				background: #4ade80;
+			}
+			.s2::before {
+				background: #ed8936;
+			}
+			.s3::before {
+				background: #38b2ac;
+			}
+			.scenario-icon {
+				width: 60px;
+				height: 60px;
+				border-radius: 16px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				margin-bottom: 28px;
+			}
+			.s1 .scenario-icon {
+				background: rgba(74, 222, 128, 0.12);
+				color: #4ade80;
+			}
+			.s2 .scenario-icon {
+				background: rgba(237, 137, 54, 0.12);
+				color: #ed8936;
+			}
+			.s3 .scenario-icon {
+				background: rgba(56, 178, 172, 0.12);
+				color: #38b2ac;
+			}
+			.scenario-icon svg {
+				width: 30px;
+				height: 30px;
+			}
+			.scenario h3 {
+				font-family: 'Montserrat', sans-serif;
+				font-size: 24px;
+				font-weight: 700;
+				color: #0f1117;
+				margin-bottom: 24px;
+			}
+			.step {
+				display: flex;
+				gap: 14px;
+				align-items: flex-start;
+				margin-bottom: 18px;
+			}
+			.step:last-child {
+				margin-bottom: 0;
+			}
+			.step-dot {
+				width: 8px;
+				height: 8px;
+				border-radius: 50%;
+				flex-shrink: 0;
+				margin-top: 8px;
+			}
+			.s1 .step-dot {
+				background: #4ade80;
+			}
+			.s2 .step-dot {
+				background: #ed8936;
+			}
+			.s3 .step-dot {
+				background: #38b2ac;
+			}
+			.step p {
+				font-size: 18px;
+				color: #718096;
+				line-height: 1.5;
+			}
+			.step strong {
+				color: #1a202c;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="slide">
+			<div class="tag">Слайд 4</div>
+			<h1>Пользовательские сценарии</h1>
+
+			<div class="scenarios">
+				<div class="scenario s1">
+					<div class="scenario-icon">
+						<!-- Lucide: user -->
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="30"
+							height="30"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
+							<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+							<circle cx="12" cy="7" r="4" />
+						</svg>
+					</div>
+					<h3>Покупатель</h3>
+					<div class="step">
+						<div class="step-dot"></div>
+						<p>Выбирает блюда и указывает <strong>адрес на карте</strong></p>
+					</div>
+					<div class="step">
+						<div class="step-dot"></div>
+						<p>
+							Моментально видит смену статусов:
+							<strong>«собирается» → «в пути»</strong>
+						</p>
+					</div>
+					<div class="step">
+						<div class="step-dot"></div>
+						<p>
+							Отслеживает <strong>курьера на карте</strong> через WebSocket в
+							реальном времени
+						</p>
+					</div>
+				</div>
+
+				<div class="scenario s2">
+					<div class="scenario-icon">
+						<!-- Lucide: store -->
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="30"
+							height="30"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
+							<path
+								d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"
+							/>
+							<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+							<path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" />
+							<path d="M2 7h20" />
+							<path
+								d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"
+							/>
+						</svg>
+					</div>
+					<h3>Владелец / Менеджер</h3>
+					<div class="step">
+						<div class="step-dot"></div>
+						<p>Получает <strong>push-уведомление</strong> о новом заказе</p>
+					</div>
+					<div class="step">
+						<div class="step-dot"></div>
+						<p>Меняет статус на <strong>«готов к выдаче»</strong></p>
+					</div>
+					<div class="step">
+						<div class="step-dot"></div>
+						<p>
+							Управляет <strong>каталогом, точками, предприятиями</strong> и
+							наличием блюд
+						</p>
+					</div>
+				</div>
+
+				<div class="scenario s3">
+					<div class="scenario-icon">
+						<!-- Lucide: bike -->
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="30"
+							height="30"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
+							<circle cx="18.5" cy="17.5" r="3.5" />
+							<circle cx="5.5" cy="17.5" r="3.5" />
+							<circle cx="15" cy="5" r="1" />
+							<path d="M12 17.5V14l-3-3 4-3 2 3h2" />
+						</svg>
+					</div>
+					<h3>Курьер</h3>
+					<div class="step">
+						<div class="step-dot"></div>
+						<p>Открывает смену, задаёт <strong>радиус доставки</strong></p>
+					</div>
+					<div class="step">
+						<div class="step-dot"></div>
+						<p>Получает автоматический <strong>Push-оффер</strong> заказа</p>
+					</div>
+					<div class="step">
+						<div class="step-dot"></div>
+						<p>Принимает в один клик, <strong>забирает и доставляет</strong></p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

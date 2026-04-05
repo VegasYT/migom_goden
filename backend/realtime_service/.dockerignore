@@ -1,0 +1,5 @@
+main
+realtime_service
+.env
+.git
+*_test.go

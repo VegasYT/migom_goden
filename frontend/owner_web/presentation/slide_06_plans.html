@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Migom - Планы</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+.slide{width:1920px;height:1080px;overflow:hidden;position:relative;background:#F7FAFC;font-family:'Inter',sans-serif;color:#1A202C;padding:80px 100px}
+.tag{display:inline-block;font-size:14px;font-weight:600;color:#4ADE80;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px}
+h1{font-family:'Montserrat',sans-serif;font-size:52px;font-weight:700;letter-spacing:-1.5px;color:#0F1117;margin-bottom:16px}
+.sub{font-size:22px;color:#718096;margin-bottom:64px}
+.plans{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.plan{background:#fff;border-radius:20px;padding:44px 40px;box-shadow:0 4px 24px rgba(0,0,0,.05);border:1px solid #E2E8F0;display:flex;gap:24px;align-items:flex-start;position:relative;overflow:hidden}
+.plan::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px}
+.p1::before{background:#4ADE80}
+.p2::before{background:#38B2AC}
+.p3::before{background:#805AD5}
+.p4::before{background:#ED8936}
+.plan-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.plan-icon svg{width:28px;height:28px}
+.p1 .plan-icon{background:rgba(74,222,128,.1);color:#4ADE80}
+.p2 .plan-icon{background:rgba(56,178,172,.1);color:#38B2AC}
+.p3 .plan-icon{background:rgba(128,90,213,.1);color:#805AD5}
+.p4 .plan-icon{background:rgba(237,137,54,.1);color:#ED8936}
+.plan-body h3{font-family:'Montserrat',sans-serif;font-size:22px;font-weight:700;color:#0F1117;margin-bottom:10px}
+.plan-body p{font-size:18px;color:#718096;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="tag">Слайд 6</div>
+  <h1>Что дальше</h1>
+  <div class="sub">Планы развития платформы</div>
+
+  <div class="plans">
+    <div class="plan p1">
+      <div class="plan-icon">
+        <!-- Lucide: git-merge -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg>
+      </div>
+      <div class="plan-body">
+        <h3>Умный батчинг заказов</h3>
+        <p>Объединение попутных заказов для одного курьера для максимальной утилизации маршрутов</p>
+      </div>
+    </div>
+
+    <div class="plan p2">
+      <div class="plan-icon">
+        <!-- Lucide: credit-card -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+      </div>
+      <div class="plan-body">
+        <h3>Интеграция с финтехом</h3>
+        <p>Подключение СБП, сплит-платежей, эквайринга и фискализации чеков</p>
+      </div>
+    </div>
+
+    <div class="plan p3">
+      <div class="plan-icon">
+        <!-- Lucide: sparkles -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg>
+      </div>
+      <div class="plan-body">
+        <h3>AI-рекомендации</h3>
+        <p>Подбор блюд на основе истории заказов и предпочтений покупателя</p>
+      </div>
+    </div>
+
+    <div class="plan p4">
+      <div class="plan-icon">
+        <!-- Lucide: smartphone -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+      </div>
+      <div class="plan-body">
+        <h3>Мобильное приложение</h3>
+        <p>Нативные клиенты для iOS и Android для более плавного пользовательского опыта</p>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,105 @@
+import '../domain/order_history_model.dart';
+
+abstract final class OrderHistoryMockData {
+  static const orders = [
+    DeliveredOrderModel(
+      id: '4821',
+      restaurantName: 'Burger King',
+      restaurantEmoji: '🍔',
+      customerAddress: 'пр. Мира, 45, кв. 18',
+      date: '4 апр 2026',
+      time: '14:32',
+      payment: 320,
+      distanceKm: 2.3,
+      items: [
+        DeliveredOrderItem(name: 'Воппер', quantity: 2),
+        DeliveredOrderItem(name: 'Картофель фри (L)', quantity: 1),
+        DeliveredOrderItem(name: 'Кола 0.5', quantity: 2),
+      ],
+    ),
+    DeliveredOrderModel(
+      id: '4810',
+      restaurantName: 'Суши Мастер',
+      restaurantEmoji: '🍣',
+      customerAddress: 'ул. Садовая, 12, кв. 3',
+      date: '4 апр 2026',
+      time: '12:15',
+      payment: 410,
+      distanceKm: 3.7,
+      items: [
+        DeliveredOrderItem(name: 'Сет «Токио»', quantity: 1),
+        DeliveredOrderItem(name: 'Том-ям', quantity: 1),
+      ],
+    ),
+    DeliveredOrderModel(
+      id: '4798',
+      restaurantName: 'Dodici Pizza',
+      restaurantEmoji: '🍕',
+      customerAddress: 'ул. Ленина, 78, кв. 55',
+      date: '3 апр 2026',
+      time: '19:48',
+      payment: 290,
+      distanceKm: 1.9,
+      items: [
+        DeliveredOrderItem(name: 'Пицца Маргарита', quantity: 1),
+        DeliveredOrderItem(name: 'Чесночный хлеб', quantity: 1),
+      ],
+    ),
+    DeliveredOrderModel(
+      id: '4785',
+      restaurantName: 'KFC',
+      restaurantEmoji: '🍗',
+      customerAddress: 'пр. Победы, 33, кв. 7',
+      date: '3 апр 2026',
+      time: '16:05',
+      payment: 350,
+      distanceKm: 4.1,
+      items: [
+        DeliveredOrderItem(name: 'Бургер Зингер', quantity: 2),
+        DeliveredOrderItem(name: 'Картофель фри M', quantity: 2),
+        DeliveredOrderItem(name: 'Пепси 0.5', quantity: 2),
+      ],
+    ),
+    DeliveredOrderModel(
+      id: '4771',
+      restaurantName: 'Burger House',
+      restaurantEmoji: '🍔',
+      customerAddress: 'ул. Пушкина, 10, кв. 22',
+      date: '2 апр 2026',
+      time: '20:30',
+      payment: 275,
+      distanceKm: 2.8,
+      items: [
+        DeliveredOrderItem(name: 'Чизбургер двойной', quantity: 1),
+        DeliveredOrderItem(name: 'Картофель фри L', quantity: 1),
+      ],
+    ),
+    DeliveredOrderModel(
+      id: '4760',
+      restaurantName: 'Пицца 33',
+      restaurantEmoji: '🍕',
+      customerAddress: 'ул. Гагарина, 5, кв. 14',
+      date: '2 апр 2026',
+      time: '18:14',
+      payment: 380,
+      distanceKm: 3.2,
+      items: [
+        DeliveredOrderItem(name: 'Пепперони XL', quantity: 1),
+      ],
+    ),
+    DeliveredOrderModel(
+      id: '4745',
+      restaurantName: 'Суши Мастер',
+      restaurantEmoji: '🍣',
+      customerAddress: 'пр. Мира, 120, кв. 8',
+      date: '1 апр 2026',
+      time: '13:40',
+      payment: 420,
+      distanceKm: 5.0,
+      items: [
+        DeliveredOrderItem(name: 'Ролл Филадельфия', quantity: 2),
+        DeliveredOrderItem(name: 'Мисо-суп', quantity: 2),
+      ],
+    ),
+  ];
+}

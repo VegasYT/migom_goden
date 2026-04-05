@@ -1,0 +1,22 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic-settings==2.4.0
+pydantic[email]
+
+# БД
+sqlalchemy==2.0.35
+asyncpg==0.29.0
+alembic==1.13.3
+
+# Auth (только верификация токена)
+python-jose[cryptography]==3.3.0
+
+# Redis
+redis==5.1.0
+
+# Kafka
+aiokafka==0.11.0
+
+# Утилиты
+python-multipart==0.0.12
+pytz==2024.1

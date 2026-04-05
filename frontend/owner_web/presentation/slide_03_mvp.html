@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Migom - MVP</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+.slide{width:1920px;height:1080px;overflow:hidden;position:relative;background:#F7FAFC;font-family:'Inter',sans-serif;color:#1A202C;padding:80px 100px}
+.tag{display:inline-block;font-size:14px;font-weight:600;color:#4ADE80;text-transform:uppercase;letter-spacing:2px;margin-bottom:16px}
+h1{font-family:'Montserrat',sans-serif;font-size:52px;font-weight:700;letter-spacing:-1.5px;color:#0F1117;margin-bottom:60px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.feature{background:#fff;border-radius:20px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,.05);border:1px solid #E2E8F0;display:flex;gap:24px;align-items:flex-start}
+.feat-num{width:48px;height:48px;border-radius:12px;background:#0F1117;color:#4ADE80;font-family:'Montserrat',sans-serif;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.feat-body h3{font-family:'Montserrat',sans-serif;font-size:22px;font-weight:700;color:#0F1117;margin-bottom:10px}
+.feat-body p{font-size:18px;color:#718096;line-height:1.6}
+.feat-highlight{border-left:4px solid #4ADE80}
+</style>
+</head>
+<body>
+<div class="slide">
+  <div class="tag">Слайд 3</div>
+  <h1>Что реализовано в MVP</h1>
+
+  <div class="grid">
+    <div class="feature feat-highlight">
+      <div class="feat-num">01</div>
+      <div class="feat-body">
+        <h3>Система ролей и доступов</h3>
+        <p>Изолированные кабинеты для Покупателя, Курьера, Владельца бизнеса и Менеджера точки</p>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feat-num">02</div>
+      <div class="feat-body">
+        <h3>Оформление заказа</h3>
+        <p>Управление несколькими корзинами по разным ресторанам, авторасчёт стоимости доставки (до 2 км базовая, дальше - по километражу)</p>
+      </div>
+    </div>
+
+    <div class="feature feat-highlight">
+      <div class="feat-num">03</div>
+      <div class="feat-body">
+        <h3>Умный поиск курьеров</h3>
+        <p>Моментальный поиск ближайшего курьера по PostGIS и выдача оффера на 30 секунд. При игнорировании - оффер переходит следующему</p>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feat-num">04</div>
+      <div class="feat-body">
+        <h3>Realtime-отслеживание</h3>
+        <p>Обновление статусов заказа и передача геопозиции курьера клиенту в реальном времени через WebSocket</p>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
