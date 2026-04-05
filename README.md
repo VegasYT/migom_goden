@@ -110,14 +110,6 @@ docker compose exec delivery_service alembic upgrade head
 | `courier.location_updated` | delivery | Геопозиция курьера обновлена |
 | `courier.order_offer` | delivery | Push-оффер курьеру (30 сек на ответ) |
 
-## Схема БД
-
-Полная схема всех таблиц: [`full_db_shemas.dbml`](full_db_shemas.dbml)
-
-## API для клиентов
-
-Полная документация эндпоинтов по ролям (покупатель, курьер, владелец, менеджер): [`INSTRUCTION.md`](INSTRUCTION.md)
-
 
 ## Базовые данные для sql init
 
