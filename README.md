@@ -31,6 +31,9 @@
 
 **Инфраструктура:** PostgreSQL 17 + PostGIS, Redis, Kafka (KRaft), MinIO, Nginx
 
+## Архитектура БД
+https://drawdb.vercel.app/editor?shareId=f819e020f90a75bfe3d7dd0dd4a18fa4
+
 ## Сервисы
 
 ### `business_service` - Python / FastAPI
