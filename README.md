@@ -85,13 +85,6 @@ cd infra
 docker compose up -d --build
 ```
 
-После запуска применить миграции:
-
-```bash
-docker compose exec business_service alembic upgrade head
-docker compose exec delivery_service alembic upgrade head
-```
-
 ## Локальные порты
 
 | Сервис | Порт |
