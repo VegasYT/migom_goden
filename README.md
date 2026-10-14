@@ -51,7 +51,7 @@ https://drawdb.vercel.app/editor?shareId=f819e020f90a75bfe3d7dd0dd4a18fa4
 ### `realtime_service` - Go
 WebSocket-хаб. Читает события из Kafka и доставляет их подключённым клиентам по роли: покупателям, менеджерам точек, курьерам. Только read-only - не пишет в БД.
 
-- WebSocket: `ws://localhost/ws?token=<JWT>`
+- WebSocket: `ws://localhost/ws?token=<access-токен Keycloak>`
 - Health: [http://localhost/realtime/health](http://localhost/realtime/health)
 - Подробнее: [`backend/realtime_service/README.md`](backend/realtime_service/README.md)
 
@@ -80,10 +80,20 @@ WebSocket-хаб. Читает события из Kafka и доставляет
 
 ## Быстрый старт
 
+Вход идёт через Keycloak Goden (realm `goden`, клиенты `migom-api` и `migom-backend`), поэтому сначала нужен Keycloak окружения Goden на `localhost:8180`. Из репозитория Goden:
+
+```bash
+docker compose -f infra/compose.yaml up -d --wait keycloak
+```
+
+Затем Мигом:
+
 ```bash
 cd infra
 docker compose up -d --build
 ```
+
+Пользователи из SQL ниже переносятся в Keycloak при первом входе со своим паролем. Почему и как - [docs/goden-integration.md](docs/goden-integration.md).
 
 ## Локальные порты
 

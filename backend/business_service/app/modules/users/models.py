@@ -25,7 +25,10 @@ class User(Base):
         Integer, ForeignKey("roles.id", ondelete="NO ACTION"), nullable=False
     )
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # id пользователя в Keycloak (realm goden); пусто, пока пользователь не перенесён
+    keycloak_id: Mapped[str | None] = mapped_column(String(36), nullable=True, unique=True)
+    # хеш bcrypt до переноса в Keycloak; у новых пользователей пароля в Мигоме нет
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True, unique=True)
     avatar_url: Mapped[str | None] = mapped_column(String(255), nullable=True)

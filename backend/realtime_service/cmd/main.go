@@ -25,11 +25,6 @@ func main() {
 
 	cfg := config.Load()
 
-	if cfg.JWTSecret == "" {
-		slog.Error("JWT_SECRET не задан")
-		os.Exit(1)
-	}
-
 	h := hub.New()
 	go h.Run()
 
@@ -38,8 +33,8 @@ func main() {
 	consumerCtx, cancelConsumer := context.WithCancel(context.Background())
 	go consumer.Run(consumerCtx)
 
-	parser := auth.NewParser(cfg.JWTSecret)
-	wsHandler := handler.NewWSHandler(h, parser)
+	resolver := auth.NewResolver(cfg.BusinessURL)
+	wsHandler := handler.NewWSHandler(h, resolver)
 
 	mux := http.NewServeMux()
 	mux.Handle("/ws", wsHandler)

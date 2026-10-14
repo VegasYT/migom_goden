@@ -31,6 +31,17 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class LogoutRequest(BaseModel):
+    refresh_token: str | None = None
+
+
+class IdentityResponse(BaseModel):
+    """Кто владелец токена: нужен realtime_service, который сам в базу не ходит."""
+    user_id: int
+    role: str
+    outlet_id: int | None = None
+
+
 class RoleResponse(BaseModel):
     id: int
     name: str

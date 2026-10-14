@@ -11,38 +11,17 @@ Goden - сервис учёта остатков, сроков годности 
 - Покупатели и курьеры Goden не видят: с Goden разговаривает backend Мигома от своего имени, сервисной учётной записью.
 - Цены остаются в Мигоме, в Goden их нет. Goden отвечает за наличие по рецептурам и расход продуктов.
 
-## 1. Вход через Keycloak, этап 1
+## 1. Вход через Keycloak, этап 1 - сделано
 
-Keycloak хранит учётные записи и выдаёт токены RS256. Адреса и ответы `/auth/*` у клиентов не меняются.
+OpenSpec change `keycloak-auth` в Мигоме, клиенты realm - change `migom-keycloak-clients` в Goden (ветка `migom-keycloak-clients` от `backend`).
 
-| Где | Сейчас | Что сделать |
-|---|---|---|
-| `backend/business_service/app/core/security.py` | выдача HS256 токенов общим секретом, bcrypt | выдачу токенов убрать; проверка токена RS256 по JWKS realm (python-jose уже стоит), проверка `iss` и `aud`; bcrypt оставить только для переноса пользователей |
-| `backend/business_service/app/modules/auth/service.py:28` (`register`) | пишет пользователя в `users` | создать пользователя в Keycloak через Admin API (пароль, email, атрибуты), затем строку в `users` и вход |
-| `auth/service.py:51` (`login`) | сверяет bcrypt | вход в Keycloak по паролю (token endpoint, `grant_type=password`); если пользователя в Keycloak нет, а пароль совпал с bcrypt в `users`, создать его в Keycloak с этим паролем (перенос при первом входе) |
-| `auth/service.py:59` (`refresh`) | разбирает свой refresh-токен | `grant_type=refresh_token` в Keycloak |
-| `auth/service.py:77` (`logout`) | ничего не делает | отзыв refresh-токена в Keycloak (`/protocol/openid-connect/logout`) |
-| `auth/service.py:82` (`_issue_tokens`) | кладёт `role` и `outlet_id` в токен | роль, id Мигома и `outlet_id` хранить в атрибутах пользователя Keycloak, в токен их добавляют mapper'ы |
-| `backend/business_service/app/core/dependencies.py:17` (`get_current_user`) | `sub` - id Мигома, проверка `type=access` | проверять токен Keycloak, пользователя искать по id из claim (см. ниже); `type` в токене Keycloak нет - проверять `typ=Bearer` |
-| `backend/business_service/app/modules/users/models.py:20` (`User`) | `password_hash` обязателен | столбец `keycloak_id` (uuid, уникальный), `password_hash` сделать необязательным; миграция Alembic |
-| `backend/business_service/app/modules/outlets/service.py:199` (`add_manager`) | назначает управляющего в БД | после назначения записать `outlet_id` в атрибут пользователя Keycloak, иначе токен будет нести старое |
-| `backend/delivery_service/app/core/security.py`, `app/core/dependencies.py:22` | проверка HS256, `outlet_id` из токена | та же проверка RS256 по JWKS, что в business_service |
-| `backend/realtime_service/internal/auth/jwt.go:34` (`Parse`) | HS256, `sub` - число, `type=access` | проверка RS256 по JWKS (например, `github.com/MicahParks/keyfunc` к уже стоящему `golang-jwt`), id пользователя из claim `migom_user_id`, роль и `outlet_id` - из своих claim |
-| `backend/realtime_service/internal/config/config.go:18` | `JWT_SECRET` | `KEYCLOAK_ISSUER` (адрес realm) и ожидаемый `aud` |
-| `.env.example` всех сервисов, `infra/docker-compose.yml` | `JWT_SECRET`, `JWT_ALGORITHM` | `KEYCLOAK_ISSUER`, `KEYCLOAK_AUDIENCE`, клиент и секрет backend для Admin API и входа по паролю |
-
-Claim токена для Мигома (mapper'ы атрибутов пользователя в клиентском scope `migom`):
-
-- `migom_user_id` - числовой `users.id`: события Kafka адресованы им, realtime сверяет их с токеном;
-- `migom_role` - `customer`, `owner`, `courier`, `moderator`, `outlet_manager`;
-- `outlet_id` - только у управляющего точкой.
-
-Что добавить в realm Goden (`infra/keycloak/goden-realm.json` в репозитории Goden):
-
-- клиент `migom-backend`: конфиденциальный, вход по паролю (`directAccessGrantsEnabled`), сервисная учётная запись с правами `manage-users` и `view-users` на `realm-management`;
-- клиент `migom-web` (этап 2): публичный, PKCE, адреса `owner_web` и `moderator_web`;
-- клиентский scope `migom` с mapper'ами атрибутов и audience `migom`;
-- тестовые пользователи из README Мигома (`admin@migom.ru`, `owner@migom.ru`, `user@migom.ru`, `courier@migom.ru`) с атрибутами.
+- `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/register` прежние по адресам и ответам, внутри - Keycloak (`app/core/keycloak.py` business_service, клиент `migom-backend`).
+- Существующие пользователи переносятся при первом входе со своим паролем (сверка с bcrypt), регистрация с почтой, которая уже есть в realm, привязывает учётную запись при верном пароле от неё. Смена пароля - в Keycloak.
+- business_service и delivery_service проверяют токен по JWKS realm (`app/core/security.py`), роль, блокировку и точку управляющего берут из базы по `users.keycloak_id`.
+- realtime_service токен не разбирает: спрашивает `GET /api/v1/auth/identity` у business_service при подключении.
+- Атрибутов пользователя и mapper'ов в Keycloak нет: от первоначального плана с claim `migom_user_id`, `migom_role`, `outlet_id` отказались, чтобы не синхронизировать роль и точку с Keycloak.
+- Настройки сервисов: `KEYCLOAK_REALM_URL`, `KEYCLOAK_ISSUER`, `KEYCLOAK_AUDIENCE`, у business_service ещё `KEYCLOAK_CLIENT_ID` и `KEYCLOAK_CLIENT_SECRET`; у realtime - `BUSINESS_URL`. `JWT_SECRET` больше нигде не нужен.
+- Проверено: модульные тесты проверки токена (`backend/business_service/tests`), сквозная проверка сценариев спеки на локальном стенде.
 
 ## 2. Вход через Keycloak, этап 2 (единый вход в вебе)
 
@@ -74,10 +53,20 @@ Claim токена для Мигома (mapper'ы атрибутов польз�
 
 - Отмена заказа с возвратом остатков в партии: команда, событие, операция API. Сейчас заказ в Goden отменить нельзя.
 - Права интеграции на точке: клиент с ролью вроде `migom.integration` получает на точке права `kitchen.view` (меню) и `orders.accept` (заказы) только там, где владелец включил Мигом. Образец - права генератора (`generator.run` и `generator.Service.PointPermissions` в Goden).
-- Клиенты и scope Мигома в `infra/keycloak/goden-realm.json` (раздел 1).
+- Клиенты `migom-api` и `migom-backend` в `infra/keycloak/goden-realm.json` - сделано (ветка `migom-keycloak-clients`); клиент `migom-web` для этапа 2 - нет.
 - Необязательно: сигналы стоп-листа для сброса кеша меню Мигома (поток `GET /points/{pointId}/events`, категория `stop-list`).
 
-## 5. Попутно замеченное
+## 5. Выкладка на сервер Goden (migom.site)
+
+Мигом разворачивается на том же сервере, что и Goden (`84.54.59.138`, 4 ГБ памяти, 2 ядра, swap 979 МБ), под доменом `migom.site`. По порядку:
+
+1. **Перед выкладкой расширить swap до 4 ГБ.** При выкладках Goden свободной памяти оставалось 200-400 МБ, swap был занят больше чем наполовину; Мигом добавит ещё PostgreSQL, Redis, Kafka, MinIO, три сервиса и nginx. Команды выполняет пользователь в своём терминале на сервере (нужен `sudo`).
+2. Решить, какие сервисы Мигома делить с Goden: отдельный Kafka - сотни мегабайт; PostgreSQL Goden без PostGIS, а Мигому PostGIS нужен. Если памяти после swap всё равно мало - сервер побольше.
+3. Порт 80 на сервере занят прокси Goden (Caddy): nginx Мигома наружу не публикуется, `migom.site` подключается через Caddy Goden.
+4. Клиенты Мигома в Keycloak сервера: файл realm на сервере применяется только при первом создании тома, поэтому `migom-api` и `migom-backend` заводит `infra/keycloak/configure.sh` Goden, секрет - `MIGOM_BACKEND_SECRET` в `infra/.env` Goden.
+5. Секреты Мигома (`JWT_SECRET` больше не нужен; пароли PostgreSQL, MinIO, секрет `migom-backend`) - в `.env` на сервере, не в репозитории.
+
+## 6. Попутно замеченное
 
 - `backend/realtime_service/internal/hub/hub.go:179`: событие `courier.location_updated` маршрутизируется по `customer_id`, а в полезной нагрузке (`delivery_service`, `couriers/service.py:103`) его нет - позиция курьера, судя по коду, не доходит до покупателя.
 - `mobile/courier_app/android/app/src/main/kotlin/com/migom/courier_app/MainApplication.kt`: ключ Яндекс MapKit записан в коде открытым текстом.

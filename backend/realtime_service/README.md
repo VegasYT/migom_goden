@@ -20,16 +20,16 @@ realtime_service
     ├── hub.Hub          - маршрутизирует события по роли/ID
     │     ├── byUserID   - индекс клиентов по user_id
     │     └── byOutletID - индекс клиентов по outlet_id
-    └── handler.WS       - HTTP → WebSocket upgrade, JWT-авторизация
+    └── handler.WS       - HTTP → WebSocket upgrade, проверка токена через business_service
 ```
 
 ## Подключение
 
 ```
-ws://localhost/ws?token=<access_jwt>
+ws://localhost/ws?token=<access-токен Keycloak>
 ```
 
-Токен - стандартный access JWT, выданный `business_service`. Тип токена должен быть `access`. Передаётся как query-параметр, так как браузерный WebSocket API не поддерживает произвольные заголовки.
+Токен - access-токен Keycloak Goden (realm `goden`), который клиент получил при входе через `business_service`. Передаётся как query-параметр, так как браузерный WebSocket API не поддерживает произвольные заголовки. Сам realtime токен не разбирает: при подключении он вызывает `GET /api/v1/auth/identity` у `business_service` с этим токеном и получает id пользователя Мигома, роль и точку управляющего. Не принятый токен - 401, недоступный `business_service` - 503.
 
 ## Маршрутизация событий
 
@@ -47,7 +47,7 @@ ws://localhost/ws?token=<access_jwt>
 >
 > Для доставки финальный статус `received` устанавливается покупателем после того как курьер отметил `delivered`. Покупатель должен нажать "Подтвердить получение" (`POST /orders/{id}/confirm`).
 
-Права определяются из JWT: поле `role` определяет тип пользователя, `outlet_id` (для роли `outlet_manager`) - к какой точке подписывать клиента.
+Права определяются по ответу `/auth/identity`: `role` - тип пользователя, `outlet_id` (для роли `outlet_manager`) - к какой точке подписывать клиента.
 
 ## Формат сообщений
 
@@ -94,7 +94,7 @@ ws://localhost/ws?token=<access_jwt>
 | Переменная | Описание | По умолчанию |
 |---|---|---|
 | `PORT` | HTTP-порт сервиса | `8080` |
-| `JWT_SECRET` | Секрет для валидации JWT (должен совпадать с `business_service`) | - |
+| `BUSINESS_URL` | `business_service`, который по токену называет пользователя | `http://business_service:8000` |
 | `KAFKA_BROKERS` | Адреса брокеров через запятую | `kafka:9092` |
 | `KAFKA_GROUP_ID` | Consumer group ID | `realtime_service` |
 
@@ -111,7 +111,7 @@ ws://localhost/ws?token=<access_jwt>
 ```
 
 Через nginx:
-- WebSocket: `ws://localhost/ws?token=<JWT>`
+- WebSocket: `ws://localhost/ws?token=<access-токен Keycloak>`
 - Health: `http://localhost/realtime/health`
 
 ## Структура проекта
@@ -122,7 +122,7 @@ realtime_service/
 │   └── main.go                - точка входа, HTTP-сервер, graceful shutdown
 ├── internal/
 │   ├── auth/
-│   │   └── jwt.go             - валидация JWT (HS256)
+│   │   └── identity.go        - кто владелец токена, по ответу business_service
 │   ├── config/
 │   │   └── config.go          - загрузка переменных окружения
 │   ├── handler/

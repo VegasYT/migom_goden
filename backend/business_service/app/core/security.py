@@ -1,55 +1,48 @@
-from datetime import datetime, timedelta, timezone
+import time
 
 import bcrypt
+import httpx
 from jose import JWTError, jwt
 
 from app.config import settings
 
-
-def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+# Ключи подписи realm: загружаются при первом токене, неизвестный kid перезагружает их
+# не чаще раза в минуту, чтобы пережить смену ключей Keycloak.
+_KEYS_RELOAD_INTERVAL = 60
+_keys: dict[str, dict] = {}
+_keys_loaded_at = float("-inf")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
+    """Сверка с хешем bcrypt из базы Мигома: нужна только для переноса пользователей в Keycloak."""
     return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
-def _create_token(
-    subject: int, role: str, token_type: str, expire_delta: timedelta,
-    outlet_id: int | None = None,
-) -> str:
-    expire = datetime.now(timezone.utc) + expire_delta
-    payload = {
-        "sub": str(subject),
-        "role": role,
-        "type": token_type,
-        "exp": expire,
-    }
-    if outlet_id is not None:
-        payload["outlet_id"] = outlet_id
-    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+async def _signing_key(kid: str | None) -> dict:
+    global _keys, _keys_loaded_at
+    if kid not in _keys and time.monotonic() - _keys_loaded_at >= _KEYS_RELOAD_INTERVAL:
+        async with httpx.AsyncClient(timeout=5) as client:
+            response = await client.get(f"{settings.keycloak_realm_url}/protocol/openid-connect/certs")
+            response.raise_for_status()
+        _keys = {key["kid"]: key for key in response.json()["keys"] if key.get("use", "sig") == "sig"}
+        _keys_loaded_at = time.monotonic()
+    key = _keys.get(kid)
+    if key is None:
+        raise JWTError("неизвестный ключ подписи")
+    return key
 
 
-def create_access_token(user_id: int, role: str, outlet_id: int | None = None) -> str:
-    return _create_token(
-        subject=user_id,
-        role=role,
-        token_type="access",
-        expire_delta=timedelta(minutes=settings.jwt_access_expire_minutes),
-        outlet_id=outlet_id,
+async def decode_token(token: str) -> dict:
+    """Проверяет access-токен Keycloak: подпись, срок, издатель и получатель.
+
+    JWTError - токен не годится; httpx.HTTPError - ключи realm не загрузились.
+    """
+    key = await _signing_key(jwt.get_unverified_header(token).get("kid"))
+    claims = jwt.decode(
+        token, key, algorithms=["RS256"],
+        audience=settings.keycloak_audience, issuer=settings.keycloak_issuer,
     )
-
-
-def create_refresh_token(user_id: int, role: str, outlet_id: int | None = None) -> str:
-    return _create_token(
-        subject=user_id,
-        role=role,
-        token_type="refresh",
-        expire_delta=timedelta(days=settings.jwt_refresh_expire_days),
-        outlet_id=outlet_id,
-    )
-
-
-def decode_token(token: str) -> dict:
-    """Декодирует JWT. Выбрасывает JWTError если токен невалиден или истёк."""
-    return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+    # refresh- и id-токены подписаны тем же ключом, но API принимает только access
+    if claims.get("typ") != "Bearer":
+        raise JWTError("ожидается access-токен")
+    return claims

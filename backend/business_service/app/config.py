@@ -21,11 +21,13 @@ class Settings(BaseSettings):
     redis_port: int = 6379
     redis_password: str = ""
 
-    # JWT
-    jwt_secret: str
-    jwt_algorithm: str = "HS256"
-    jwt_access_expire_minutes: int = 15
-    jwt_refresh_expire_days: int = 30
+    # Keycloak (realm goden): адрес realm для запросов сервиса и издатель, записанный в токенах.
+    # Из контейнера Keycloak доступен по другому адресу, чем тот, что стоит в токене.
+    keycloak_realm_url: str
+    keycloak_issuer: str
+    keycloak_audience: str = "migom-api"
+    keycloak_client_id: str = "migom-backend"
+    keycloak_client_secret: str
 
     # MinIO
     minio_endpoint: str

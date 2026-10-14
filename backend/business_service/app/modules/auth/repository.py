@@ -16,6 +16,16 @@ class UserRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_by_keycloak_id(self, keycloak_id: str) -> User | None:
+        result = await self._session.execute(
+            select(User).options(selectinload(User.role)).where(User.keycloak_id == keycloak_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def link_keycloak(self, user: User, keycloak_id: str) -> None:
+        user.keycloak_id = keycloak_id
+        await self._session.flush()
+
     async def get_by_id(self, user_id: int) -> User | None:
         result = await self._session.execute(
             select(User).options(selectinload(User.role)).where(User.id == user_id)
@@ -40,14 +50,14 @@ class UserRepository:
     async def create(
         self,
         email: str,
-        password_hash: str,
+        keycloak_id: str,
         full_name: str,
         role_id: int,
         phone: str | None = None,
     ) -> User:
         user = User(
             email=email,
-            password_hash=password_hash,
+            keycloak_id=keycloak_id,
             full_name=full_name,
             role_id=role_id,
             phone=phone,

@@ -1,10 +1,12 @@
 from typing import Annotated
 
+import httpx
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.keycloak import KeycloakUnavailableError
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.modules.auth.exceptions import InvalidTokenError, UserInactiveError
@@ -19,16 +21,15 @@ async def get_current_user(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> User:
     try:
-        payload = decode_token(credentials.credentials)
+        payload = await decode_token(credentials.credentials)
     except JWTError:
         raise InvalidTokenError()
+    except httpx.HTTPError:
+        raise KeycloakUnavailableError()
 
-    if payload.get("type") != "access":
-        raise InvalidTokenError()
-
-    user_id = int(payload["sub"])
+    # токен Keycloak называет пользователя его id в realm, роль и блокировка - в базе Мигома
     repo = UserRepository(session)
-    user = await repo.get_by_id(user_id)
+    user = await repo.get_by_keycloak_id(payload["sub"])
 
     if not user:
         raise InvalidTokenError()

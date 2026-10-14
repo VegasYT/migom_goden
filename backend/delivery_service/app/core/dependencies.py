@@ -1,39 +1,59 @@
 from dataclasses import dataclass
 from typing import Annotated
 
-from fastapi import Depends
+import httpx
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ForbiddenError, UnauthorizedError
 from app.core.security import decode_token
+from app.db.session import get_db
 
 bearer_scheme = HTTPBearer()
 
 
 @dataclass
 class TokenData:
-    """Данные из JWT-токена. Сервис доверяет токену - в БД за пользователем не ходим."""
+    """Пользователь Мигома по токену Keycloak: id, роль и точка управляющего из общей базы."""
     user_id: int
     role: str
     outlet_id: int | None = None
 
 
+# пользователи, роли и назначения управляющих - таблицы business_service в той же базе
+_USER_BY_KEYCLOAK_ID = text("""
+    SELECT u.id, r.name AS role, u.is_active,
+           (SELECT om.outlet_id FROM outlet_managers om
+            WHERE om.user_id = u.id ORDER BY om.id LIMIT 1) AS outlet_id
+    FROM users u JOIN roles r ON r.id = u.role_id
+    WHERE u.keycloak_id = :keycloak_id
+""")
+
+
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
+    session: Annotated[AsyncSession, Depends(get_db)],
 ) -> TokenData:
     try:
-        payload = decode_token(credentials.credentials)
+        payload = await decode_token(credentials.credentials)
     except JWTError:
         raise UnauthorizedError("Невалидный или истёкший токен")
+    except httpx.HTTPError:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Сервис входа временно недоступен")
 
-    if payload.get("type") != "access":
-        raise UnauthorizedError("Ожидается access-токен")
+    user = (await session.execute(_USER_BY_KEYCLOAK_ID, {"keycloak_id": payload["sub"]})).one_or_none()
+    if user is None:
+        raise UnauthorizedError("Пользователь не зарегистрирован в Мигоме")
+    if not user.is_active:
+        raise ForbiddenError("Аккаунт заблокирован")
 
     return TokenData(
-        user_id=int(payload["sub"]),
-        role=payload["role"],
-        outlet_id=payload.get("outlet_id"),
+        user_id=user.id,
+        role=user.role,
+        outlet_id=user.outlet_id if user.role == "outlet_manager" else None,
     )
 
 

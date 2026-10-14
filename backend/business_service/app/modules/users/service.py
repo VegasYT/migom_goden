@@ -1,5 +1,5 @@
 from app.core.storage import delete_photo, upload_photo
-from app.core.security import hash_password, verify_password
+from app.core import keycloak
 from app.modules.users.exceptions import (
     SamePasswordError,
     UserAccessDeniedError,
@@ -43,11 +43,14 @@ class UsersService:
     async def change_password(
         self, current_user: User, data: ChangePasswordRequest
     ) -> None:
-        if not verify_password(data.current_password, current_user.password_hash):
-            raise WrongPasswordError()
         if data.current_password == data.new_password:
             raise SamePasswordError()
-        await self._repo.update(current_user, password_hash=hash_password(data.new_password))
+        try:
+            await keycloak.password_grant(current_user.email, data.current_password)
+        except keycloak.KeycloakRejectedError:
+            raise WrongPasswordError()
+        # пользователь с токеном Keycloak всегда привязан: get_current_user ищет его по keycloak_id
+        await keycloak.set_password(current_user.keycloak_id, data.new_password)
 
     async def get_user(self, user_id: int, current_user: User) -> UserResponse:
         self._require_moderator(current_user)

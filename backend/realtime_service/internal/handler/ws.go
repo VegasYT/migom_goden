@@ -13,33 +13,34 @@ import (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	// Разрешаем все origins - контроль доступа через JWT
+	// Разрешаем все origins - контроль доступа через токен Keycloak
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
 type WSHandler struct {
-	hub    *hub.Hub
-	parser *auth.Parser
+	hub      *hub.Hub
+	resolver *auth.Resolver
 }
 
-func NewWSHandler(h *hub.Hub, p *auth.Parser) *WSHandler {
-	return &WSHandler{hub: h, parser: p}
+func NewWSHandler(h *hub.Hub, r *auth.Resolver) *WSHandler {
+	return &WSHandler{hub: h, resolver: r}
 }
 
 func (wh *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Токен передаётся как query-параметр: /ws?token=<JWT>
+	// Токен передаётся как query-параметр: /ws?token=<access-токен Keycloak>
 	token := r.URL.Query().Get("token")
 	if token == "" {
 		http.Error(w, "token обязателен", http.StatusUnauthorized)
 		return
 	}
 
-	claims, err := wh.parser.Parse(token)
+	identity, err := wh.resolver.Resolve(r.Context(), token)
 	if err != nil {
-		if errors.Is(err, auth.ErrWrongType) {
-			http.Error(w, "ожидается access-токен", http.StatusUnauthorized)
-		} else {
+		if errors.Is(err, auth.ErrInvalidToken) {
 			http.Error(w, "невалидный токен", http.StatusUnauthorized)
+		} else {
+			slog.Warn("не удалось проверить токен", "err", err)
+			http.Error(w, "проверка токена временно недоступна", http.StatusServiceUnavailable)
 		}
 		return
 	}
@@ -50,6 +51,6 @@ func (wh *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.Info("новое WS-соединение", "user_id", claims.UserID, "role", claims.Role)
-	wh.hub.Register(conn, claims.UserID, claims.Role, claims.OutletID)
+	slog.Info("новое WS-соединение", "user_id", identity.UserID, "role", identity.Role)
+	wh.hub.Register(conn, identity.UserID, identity.Role, identity.OutletID)
 }

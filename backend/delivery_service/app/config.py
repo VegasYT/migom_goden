@@ -24,9 +24,10 @@ class Settings(BaseSettings):
     # Kafka
     kafka_bootstrap_servers: str = "localhost:9092"
 
-    # JWT (только для верификации, секрет общий с business_service)
-    jwt_secret: str
-    jwt_algorithm: str = "HS256"
+    # Keycloak (realm goden): адрес realm для запросов сервиса и издатель, записанный в токенах
+    keycloak_realm_url: str
+    keycloak_issuer: str
+    keycloak_audience: str = "migom-api"
 
     @property
     def db_url(self) -> str:

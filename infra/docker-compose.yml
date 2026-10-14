@@ -95,6 +95,9 @@ services:
         condition: service_healthy
     env_file:
       - ../backend/business_service/.env
+    # Keycloak Goden работает на хосте (порт 8180): на Linux имя host.docker.internal нужно объявить
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     expose:
       - "8000"
 
@@ -113,6 +116,9 @@ services:
         condition: service_healthy
     env_file:
       - ../backend/delivery_service/.env
+    # Keycloak Goden работает на хосте (порт 8180): на Linux имя host.docker.internal нужно объявить
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     expose:
       - "8001"
 

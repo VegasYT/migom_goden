@@ -6,7 +6,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user
 from app.db.session import get_db
 from app.modules.auth.repository import UserRepository
-from app.modules.auth.schemas import LoginRequest, RefreshRequest, RegisterRequest, RoleResponse, TokenResponse
+from app.modules.auth.schemas import (
+    IdentityResponse,
+    LoginRequest,
+    LogoutRequest,
+    RefreshRequest,
+    RegisterRequest,
+    RoleResponse,
+    TokenResponse,
+)
 from app.modules.auth.service import AuthService
 from app.modules.users.models import User
 
@@ -56,6 +64,16 @@ async def list_roles(
 async def logout(
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[AuthService, Depends(_get_service)],
+    data: LogoutRequest | None = None,
 ):
-    """Выход из системы"""
-    await service.logout(current_user.id)
+    """Выход из системы. Переданный refresh-токен отзывается в Keycloak."""
+    await service.logout(data.refresh_token if data else None)
+
+
+@router.get("/identity", response_model=IdentityResponse)
+async def identity(
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[AuthService, Depends(_get_service)],
+):
+    """Id пользователя в Мигоме, роль и точка управляющего по токену Keycloak."""
+    return await service.identity(current_user)
