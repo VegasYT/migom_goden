@@ -34,26 +34,28 @@ OpenSpec change `keycloak-auth` в Мигоме, клиенты realm - change `
 
 ## 3. Наличие блюд и заказы через Goden
 
-Сопоставление сущностей (миграция Alembic в business_service):
+Сопоставление сущностей - сделано (change `goden-binding`):
 
-- `outlets.goden_point_id` (uuid) - точка Goden; `companies.goden_company_id` - компания Goden;
-- `catalog_items.goden_dish_id` (uuid) - блюдо Goden. Позиции, которые продаются как есть (напитки), в Goden должны быть блюдом с рецептурой из одного продукта, иначе они в стоп-листе с причиной "нет рецептуры".
+- `outlets.goden_point_id` (uuid) - точка Goden, `catalog_items.goden_dish_id` (uuid) - блюдо Goden. Заведение и точка остаются разными сущностями: у каждой системы свои данные, Мигом работает и с ресторанами без Goden;
+- владелец заведения и владелец точки - один пользователь общего Keycloak. Мигом показывает ему его точки Goden и подключает выбранную от его имени: токены `migom-backend` несут `aud` `goden-api` (change `migom-user-tokens` в Goden), Мигом вызывает `PUT /points/{pointId}/migom` с номером заведения и сохраняет `goden_point_id`. Подтверждение двустороннее: одной операцией и в Goden, и в Мигоме, и только для точки, которой пользователь владеет;
+- товары связываются с блюдами точки в окне "Goden" owner_web: по названию, вручную или созданием товара из блюда. Позиции, которые продаются как есть (напитки), в Goden должны быть блюдом с рецептурой из одного продукта, иначе они в стоп-листе с причиной "нет рецептуры";
+- при обращениях сервисной учётной записи `migom-integration` (заказы, наличие) Мигом сверяет пару `(goden_point_id, outlets.id)` с `GET /migom/points`: владелец точки может отключить Мигом в Goden в любой момент.
 
 | Где | Сейчас | Что сделать |
 |---|---|---|
 | `backend/business_service/app/modules/outlets/service.py:101` (`get_outlet_menu`, кеш `outlet_menu:{outlet_id}`) | доступность из `outlet_item_availability` | у точки с `goden_point_id` брать доступность и число порций из `GET /points/{pointId}/menu` Goden; кеш на 15-30 секунд; Goden недоступен - показывать меню без отметок наличия или из кеша |
 | `outlets/service.py:142` (`list_items_availability`), `:167` (`set_item_availability`) | ручная доступность | у точки Goden ручную доступность убрать или оставить как "выключить блюдо" (`PUT /points/{pointId}/dishes/{dishId}` Goden) |
 | `backend/delivery_service/app/modules/orders/service.py:80` (`create_order`) | заказ создаётся без проверки наличия | до создания и публикации `order.created` (`:151`) - `POST /points/{pointId}/orders` в Goden с `Idempotency-Key` = ключ заказа Мигома; `rejected` - ответ покупателю с недостающими продуктами (`shortages[].product.name`), заказ не создаётся; `accepted` - создать заказ как сейчас |
-| `orders/service.py:192` (`customer_cancel`), `:415` (`owner_cancel`), `:484` (`admin_cancel`) | только статус `cancelled` | вернуть продукты в Goden отменой заказа - такой операции в Goden пока нет (см. раздел 4) |
+| `orders/service.py:192` (`customer_cancel`), `:415` (`owner_cancel`), `:484` (`admin_cancel`) | только статус `cancelled` | вернуть продукты в Goden (`POST /points/{pointId}/orders/{orderId}/cancel`), **только пока заказ не начали готовить**: статусы `new` и `assigned`. Goden не знает, готовит ли кухня, и вернёт продукты при любом вызове; если отменить в Goden заказ в `assembling` и дальше, склад покажет продукты, которых нет, и меню предложит блюда, которые нельзя приготовить. Позже отмена в Мигоме меняет только его статус |
 | новый клиент Goden в delivery_service и business_service | исходящих HTTP-вызовов нет | клиент с токеном сервисной учётной записи (`client_credentials`), тайм-ауты, ключи идемпотентности, разбор ошибок `application/problem+json` |
 
 Порядок при создании заказа: если Goden принял заказ, а сохранение в Мигоме упало, повтор с тем же ключом вернёт тот же ответ Goden и продукты не спишутся дважды. Если заказ в Мигоме так и не создан, принятый заказ в Goden нужно отменить (раздел 4).
 
 ## 4. Что нужно в Goden
 
-- Отмена заказа с возвратом остатков в партии: команда, событие, операция API. Сейчас заказ в Goden отменить нельзя.
-- Права интеграции на точке: клиент с ролью вроде `migom.integration` получает на точке права `kitchen.view` (меню) и `orders.accept` (заказы) только там, где владелец включил Мигом. Образец - права генератора (`generator.run` и `generator.Service.PointPermissions` в Goden).
-- Клиенты `migom-api` и `migom-backend` в `infra/keycloak/goden-realm.json` - сделано (ветка `migom-keycloak-clients`); клиент `migom-web` для этапа 2 - нет.
+- Отмена заказа с возвратом остатков в партии: команда, событие, операция API - сделано (change `order-cancellation` в Goden).
+- Права интеграции на точке: клиент `migom-integration` с ролью `migom.integration` получает на точке права `point.view`, `kitchen.view`, `orders.accept`, `orders.view` только там, где владелец подключил заведение Мигома (change `migom-access` в Goden). Отменить Мигом может только заказы, которые оформил сам: заказ официанта Goden вернёт 403.
+- Клиенты `migom-api` и `migom-backend` в `infra/keycloak/goden-realm.json` - сделано (ветка `migom-keycloak-clients`); на сервере их заводит `keycloak-config` (change `migom-keycloak-server`); токены `migom-backend` принимает API Goden (change `migom-user-tokens`); клиент `migom-web` для этапа 2 - нет.
 - Необязательно: сигналы стоп-листа для сброса кеша меню Мигома (поток `GET /points/{pointId}/events`, категория `stop-list`).
 
 ## 5. Выкладка на сервер Goden (migom.site)

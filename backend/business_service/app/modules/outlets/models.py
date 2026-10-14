@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, SmallInteger, String, Time, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, SmallInteger, String, Time, UniqueConstraint, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -30,6 +31,8 @@ class Outlet(Base):
     opens_at: Mapped[str] = mapped_column(Time, nullable=False, server_default="00:00:00")
     closes_at: Mapped[str] = mapped_column(Time, nullable=False, server_default="23:59:59")
     timezone: Mapped[str] = mapped_column(String(255), nullable=False, server_default="UTC")
+    # точка Goden, со склада которой работает заведение
+    goden_point_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
 
     company: Mapped["Company"] = relationship("Company", back_populates="outlets")
 

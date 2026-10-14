@@ -39,6 +39,13 @@ async def get_current_user(
     return user
 
 
+def get_access_token(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
+) -> str:
+    """Access token запроса: с ним Мигом обращается в Goden от имени пользователя."""
+    return credentials.credentials
+
+
 def require_roles(*roles: str):
     """Dependency-фабрика для проверки роли. Пример: Depends(require_roles('moderator'))"""
     async def _check(current_user: Annotated[User, Depends(get_current_user)]) -> User:

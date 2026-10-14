@@ -14,10 +14,12 @@ import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
+import WarehouseOutlinedIcon from '@mui/icons-material/WarehouseOutlined';
 import { useDeleteOutlet } from '../api/useDeleteOutlet';
 import { OutletDialog } from './OutletDialog';
 import { OutletAvailabilityDialog } from './OutletAvailabilityDialog';
 import { OutletManagersDialog } from './OutletManagersDialog';
+import { OutletGodenDialog } from './OutletGodenDialog';
 import type { Outlet } from '../types';
 
 interface Props {
@@ -34,6 +36,7 @@ export function OutletCard({ outlet, companyId }: Props) {
 	const [editOpen, setEditOpen] = useState(false);
 	const [availabilityOpen, setAvailabilityOpen] = useState(false);
 	const [managersOpen, setManagersOpen] = useState(false);
+	const [godenOpen, setGodenOpen] = useState(false);
 	const deleteOutlet = useDeleteOutlet();
 
 	const deliveryInfo = [
@@ -178,6 +181,20 @@ export function OutletCard({ outlet, companyId }: Props) {
 					>
 						Менеджеры
 					</Button>
+					<Button
+						size="small"
+						variant="text"
+						startIcon={<WarehouseOutlinedIcon sx={{ fontSize: '14px !important' }} />}
+						onClick={() => setGodenOpen(true)}
+						sx={{
+							fontSize: 12,
+							color: outlet.goden_point_id ? 'primary.main' : 'text.secondary',
+							textTransform: 'none',
+							minWidth: 0,
+						}}
+					>
+						{outlet.goden_point_id ? 'Goden подключён' : 'Goden'}
+					</Button>
 				</Box>
 			</Box>
 
@@ -197,6 +214,12 @@ export function OutletCard({ outlet, companyId }: Props) {
 				open={managersOpen}
 				onClose={() => setManagersOpen(false)}
 				outlet={outlet}
+			/>
+			<OutletGodenDialog
+				open={godenOpen}
+				onClose={() => setGodenOpen(false)}
+				outlet={outlet}
+				companyId={companyId}
 			/>
 		</>
 	);

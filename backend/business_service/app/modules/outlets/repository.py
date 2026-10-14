@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -14,6 +16,10 @@ class OutletRepository:
             select(Outlet).where(Outlet.id == outlet_id)
         )
         return result.scalar_one_or_none()
+
+    async def list_by_goden_points(self, point_ids: list[uuid.UUID]) -> list[Outlet]:
+        result = await self._session.execute(select(Outlet).where(Outlet.goden_point_id.in_(point_ids)))
+        return list(result.scalars().all())
 
     async def list_by_company(self, company_id: int) -> list[Outlet]:
         result = await self._session.execute(
@@ -53,6 +59,9 @@ class OutletRepository:
         await self._session.flush()
         await self._session.refresh(outlet)
         return outlet
+
+    async def flush(self) -> None:
+        await self._session.flush()
 
     async def delete(self, outlet: Outlet) -> None:
         await self._session.delete(outlet)

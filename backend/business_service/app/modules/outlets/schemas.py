@@ -1,3 +1,4 @@
+import uuid
 from datetime import time
 from decimal import Decimal
 
@@ -61,6 +62,7 @@ class OutletResponse(BaseModel):
     opens_at: time
     closes_at: time
     timezone: str
+    goden_point_id: uuid.UUID | None = None
 
     model_config = {"from_attributes": True}
 

@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from decimal import Decimal
 
@@ -36,6 +37,7 @@ class CatalogItemCreate(BaseModel):
     name: str
     description: str | None = None
     price: Decimal
+    goden_dish_id: uuid.UUID | None = None
 
     @field_validator("price")
     @classmethod
@@ -51,6 +53,8 @@ class CatalogItemUpdate(BaseModel):
     description: str | None = None
     price: Decimal | None = None
     is_active: bool | None = None
+    # null снимает связь с блюдом Goden; поле, которого нет в запросе, связь не меняет
+    goden_dish_id: uuid.UUID | None = None
 
     @field_validator("price")
     @classmethod
@@ -69,6 +73,7 @@ class CatalogItemResponse(BaseModel):
     price: Decimal
     photo_url: str | None
     is_active: bool
+    goden_dish_id: uuid.UUID | None = None
     created_at: datetime
     updated_at: datetime
 

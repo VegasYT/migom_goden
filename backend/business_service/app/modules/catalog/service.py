@@ -1,11 +1,14 @@
 from collections import defaultdict
 
+from sqlalchemy.exc import IntegrityError
+
 from app.core.cache import cache_delete, cache_get, cache_set
 from app.core.storage import delete_photo, upload_photo
 from app.modules.catalog.exceptions import (
     CategoryAccessDeniedError,
     CategoryNotFoundError,
     CompanyNotFoundError,
+    GodenDishLinkedError,
     ItemAccessDeniedError,
     ItemNotFoundError,
 )
@@ -124,13 +127,18 @@ class CatalogService:
         category = await self._repo.get_category_by_id(data.category_id)
         if not category:
             raise CategoryNotFoundError()
-        item = await self._repo.create_item(
-            company_id=company_id,
-            category_id=data.category_id,
-            name=data.name,
-            price=float(data.price),
-            description=data.description,
-        )
+        try:
+            item = await self._repo.create_item(
+                company_id=company_id,
+                category_id=data.category_id,
+                name=data.name,
+                price=float(data.price),
+                description=data.description,
+                goden_dish_id=data.goden_dish_id,
+            )
+        except IntegrityError:
+            # единственное уникальное ограничение товара - блюдо Goden в компании
+            raise GodenDishLinkedError()
         await self._invalidate_menu(company_id)
         return CatalogItemResponse.model_validate(item)
 
@@ -157,8 +165,17 @@ class CatalogService:
             price=float(data.price) if data.price else None,
             is_active=data.is_active,
         )
+        if "goden_dish_id" in data.model_fields_set:
+            updated = await self.link_goden_dish(updated, data.goden_dish_id)
         await self._invalidate_menu(company_id)
         return CatalogItemResponse.model_validate(updated)
+
+    async def link_goden_dish(self, item, dish_id):
+        """Связывает товар с блюдом Goden; None снимает связь. Доступ проверяет вызывающий."""
+        try:
+            return await self._repo.update_item_fields(item, goden_dish_id=dish_id)
+        except IntegrityError:
+            raise GodenDishLinkedError()
 
     async def delete_item(
         self, company_id: int, item_id: int, current_user: User

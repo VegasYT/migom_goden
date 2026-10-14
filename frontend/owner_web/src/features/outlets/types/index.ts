@@ -55,6 +55,22 @@ export interface Outlet {
 	opens_at: string;
 	closes_at: string;
 	timezone: string;
+	// точка Goden, со склада которой работает заведение
+	goden_point_id: string | null;
+}
+
+export interface GodenPoint {
+	id: string;
+	name: string;
+	company_name: string;
+	// заведение Мигома, которое уже подключено к точке
+	outlet_id: number | null;
+}
+
+export interface GodenDish {
+	id: string;
+	name: string;
+	item: { id: number; name: string } | null;
 }
 
 export interface CreateOutletDto {

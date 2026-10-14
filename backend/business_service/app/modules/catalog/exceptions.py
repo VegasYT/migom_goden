@@ -40,3 +40,11 @@ class ItemAccessDeniedError(HTTPException):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Нет доступа к этой позиции меню",
         )
+
+
+class GodenDishLinkedError(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Это блюдо Goden уже связано с другим товаром",
+        )

@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     keycloak_client_id: str = "migom-backend"
     keycloak_client_secret: str
 
+    # API Goden (с /api/v1): точки и меню Goden от имени пользователя
+    goden_api_url: str
+
     # MinIO
     minio_endpoint: str
     minio_access_key: str

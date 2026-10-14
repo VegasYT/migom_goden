@@ -25,6 +25,7 @@ from app.modules.reviews.router import router as reviews_router
 from app.modules.discounts.router import router as discounts_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.promo.router import router as promo_router
+from app.modules.goden.router import router as goden_router
 
 
 @asynccontextmanager
@@ -66,6 +67,7 @@ app.include_router(reviews_router, prefix="/api/v1")
 app.include_router(discounts_router, prefix="/api/v1")
 app.include_router(notifications_router, prefix="/api/v1")
 app.include_router(promo_router, prefix="/api/v1")
+app.include_router(goden_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["health"])

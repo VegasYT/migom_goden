@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -82,6 +84,7 @@ class CatalogRepository:
         name: str,
         price: float,
         description: str | None,
+        goden_dish_id: uuid.UUID | None = None,
     ) -> CatalogItem:
         item = CatalogItem(
             company_id=company_id,
@@ -89,6 +92,7 @@ class CatalogRepository:
             name=name,
             price=price,
             description=description,
+            goden_dish_id=goden_dish_id,
         )
         self._session.add(item)
         await self._session.flush()
@@ -101,6 +105,17 @@ class CatalogRepository:
         await self._session.flush()
         await self._session.refresh(item)
         return item
+
+    async def update_item_fields(self, item: CatalogItem, **fields) -> CatalogItem:
+        """Как update_item, но записывает и None: так снимается связь с блюдом Goden."""
+        for key, value in fields.items():
+            setattr(item, key, value)
+        await self._session.flush()
+        await self._session.refresh(item)
+        return item
+
+    async def flush(self) -> None:
+        await self._session.flush()
 
     async def delete_item(self, item: CatalogItem) -> None:
         await self._session.delete(item)
