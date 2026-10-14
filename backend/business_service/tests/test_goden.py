@@ -12,6 +12,7 @@ os.environ.update({
     "KEYCLOAK_ISSUER": "http://localhost:8180/realms/goden",
     "KEYCLOAK_CLIENT_SECRET": "-",
     "GODEN_API_URL": "http://goden/api/v1",
+    "GODEN_CLIENT_SECRET": "integration-secret",
 })
 
 import httpx  # noqa: E402
@@ -81,6 +82,52 @@ def test_errors(status, error):
     client = _client(lambda request: httpx.Response(status, json={"type": "x", "title": "x", "status": status}))
     with pytest.raises(error):
         asyncio.run(client.set_outlet(POINT, 7))
+
+
+@pytest.fixture
+def migom(monkeypatch):
+    """Сервисная учётная запись: Keycloak выдаёт токены по порядку, Goden отвечает по handler."""
+    monkeypatch.setattr(goden, "_service_token", None)
+    monkeypatch.setattr(goden, "_pairs_loaded_at", 0.0)
+    calls = {"tokens": 0, "points": 0}
+
+    def install(goden_handler):
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path.endswith("/protocol/openid-connect/token"):
+                form = dict(httpx.QueryParams(request.content.decode()))
+                assert form["grant_type"] == "client_credentials"
+                assert form["client_id"] == "migom-integration"
+                assert form["client_secret"] == "integration-secret"
+                calls["tokens"] += 1
+                return httpx.Response(200, json={"access_token": f"token-{calls['tokens']}", "expires_in": 300})
+            if request.url.path == "/api/v1/migom/points":
+                calls["points"] += 1
+            return goden_handler(request)
+
+        monkeypatch.setattr(goden.GodenClient, "transport", httpx.MockTransport(handler))
+        return calls
+
+    return install
+
+
+def test_confirmed_checks_pair_and_caches_list(migom):
+    calls = migom(lambda request: httpx.Response(200, json=[{"point_id": str(POINT), "outlet_id": 7}]))
+    assert asyncio.run(goden.confirmed(POINT, 7))
+    # к точке подключено другое заведение
+    assert not asyncio.run(goden.confirmed(POINT, 8))
+    assert calls == {"tokens": 1, "points": 1}
+
+
+def test_revoked_token_is_requested_again(migom):
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.headers["Authorization"] == "Bearer token-1":
+            return httpx.Response(401)
+        return httpx.Response(200, json={"items": [{"dish": {"id": "d", "name": "Паста"}, "available": True}], "total": 1})
+
+    calls = migom(handler)
+    menu = asyncio.run(goden.as_migom(lambda client: client.menu(POINT)))
+    assert menu[0]["available"]
+    assert calls["tokens"] == 2
 
 
 def test_network_failure_is_unavailable():

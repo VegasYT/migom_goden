@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     keycloak_issuer: str
     keycloak_audience: str = "migom-api"
 
+    # API Goden (с /api/v1) и сервисная учётная запись Мигома в нём: заказы на кухню точки Goden
+    goden_api_url: str
+    goden_client_id: str = "migom-integration"
+    goden_client_secret: str
+
     @property
     def db_url(self) -> str:
         return (

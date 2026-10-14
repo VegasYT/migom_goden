@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy.exc import IntegrityError
 
+from app.core.cache import cache_delete
 from app.core.goden import GodenClient, GodenConflictError, GodenForbiddenError
 from app.modules.catalog.exceptions import GodenDishLinkedError
 from app.modules.catalog.models import CatalogItem
@@ -13,6 +14,7 @@ from app.modules.outlets.exceptions import OutletAccessDeniedError, OutletNotFou
 from app.modules.outlets.models import Outlet
 from app.modules.outlets.repository import OutletRepository
 from app.modules.outlets.schemas import OutletResponse
+from app.modules.outlets.service import OUTLET_MENU_CACHE_KEY
 from app.modules.users.models import User
 
 
@@ -65,6 +67,8 @@ class GodenBindingService:
         except IntegrityError:
             # точку только что занял другой запрос
             raise GodenPointTakenError()
+        # наличие в меню теперь берётся из другой точки
+        await cache_delete(OUTLET_MENU_CACHE_KEY.format(outlet_id=outlet.id))
         return OutletResponse.model_validate(outlet)
 
     async def dishes(self, outlet_id: int, user: User) -> list[GodenDishResponse]:

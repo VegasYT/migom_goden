@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import and_, select, func, text
@@ -204,8 +205,12 @@ class OrderRepository:
         customer_address_id: int | None,
         comment: str | None,
         leave_at_door: bool,
+        goden_point_id: uuid.UUID | None = None,
+        goden_order_id: uuid.UUID | None = None,
     ) -> Order:
         order = Order(
+            goden_point_id=goden_point_id,
+            goden_order_id=goden_order_id,
             customer_id=customer_id,
             company_id=company_id,
             outlet_id=outlet_id,
@@ -296,7 +301,7 @@ class OutletReadRepository:
         result = await self._session.execute(
             text(
                 "SELECT id, company_id, name, address, is_active, min_order_price, delivery_fee, "
-                "opens_at, closes_at, timezone, latitude, longitude "
+                "opens_at, closes_at, timezone, latitude, longitude, goden_point_id "
                 "FROM outlets WHERE id = :id"
             ),
             {"id": outlet_id},

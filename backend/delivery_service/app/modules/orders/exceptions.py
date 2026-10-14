@@ -1,4 +1,4 @@
-from app.core.exceptions import BadRequestError, ForbiddenError, NotFoundError
+from app.core.exceptions import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 
 
 class OrderNotFoundError(NotFoundError):
@@ -74,3 +74,19 @@ class PickupOnlyError(BadRequestError):
 class OrderNotOfferedError(BadRequestError):
     def __init__(self):
         super().__init__("Этот заказ не предложен вам или время оффера истекло")
+
+
+class ProductsShortageError(ConflictError):
+    def __init__(self, products: list[str]):
+        names = ", ".join(products) if products else "часть продуктов"
+        super().__init__(f"Заведению не хватает продуктов: {names}. Уменьшите количество или выберите другие блюда")
+
+
+class ItemNotSoldError(ConflictError):
+    def __init__(self, name: str):
+        super().__init__(f'Товар "{name}" сейчас не продаётся в этом заведении')
+
+
+class OutletNotAcceptingError(ConflictError):
+    def __init__(self):
+        super().__init__("Заведение сейчас не принимает заказы")

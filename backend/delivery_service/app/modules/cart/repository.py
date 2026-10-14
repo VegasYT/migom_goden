@@ -88,11 +88,11 @@ class CatalogReadRepository:
         self._session = session
 
     async def get_catalog_item(self, catalog_item_id: int) -> dict | None:
-        """Возвращает name, price, company_id, is_active из catalog_items."""
+        """Возвращает name, price, company_id, is_active и блюдо Goden из catalog_items."""
         from sqlalchemy import text
         result = await self._session.execute(
             text(
-                "SELECT id, name, price, company_id, is_active "
+                "SELECT id, name, price, company_id, is_active, goden_dish_id "
                 "FROM catalog_items WHERE id = :id"
             ),
             {"id": catalog_item_id},

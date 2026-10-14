@@ -95,6 +95,8 @@ docker compose up -d --build
 
 Пользователи из SQL ниже переносятся в Keycloak при первом входе со своим паролем. Почему и как - [docs/goden-integration.md](docs/goden-integration.md).
 
+Заведения, подключённые к точке Goden, берут наличие и оформляют заказы через API Goden (`GODEN_API_URL` в `.env` business_service и delivery_service, сервисная учётная запись `migom-integration`, см. `.env.example`). Для них нужен запущенный API Goden на `localhost:8080`; заведения без Goden работают и без него.
+
 ## Локальные порты
 
 | Сервис | Порт |

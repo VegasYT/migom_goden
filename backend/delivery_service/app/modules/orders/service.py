@@ -1,12 +1,14 @@
 import asyncio
 import json
 import logging
+import uuid
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from redis.asyncio import Redis
 
-from app.core import kafka
+from app.core import goden, kafka
 from app.core.dependencies import TokenData
 from app.modules.cart.repository import CartRepository, CatalogReadRepository
 from app.modules.couriers.repository import CourierRepository
@@ -17,15 +19,18 @@ from app.modules.orders.exceptions import (
     CourierOutOfZoneError,
     DeliveryAddressRequiredError,
     DeliveryZoneError,
+    ItemNotSoldError,
     MinOrderPriceError,
     OrderAccessDeniedError,
     OrderInvalidStatusError,
     OrderNotFoundError,
     OrderNotOfferedError,
     OutletClosedError,
+    OutletNotAcceptingError,
     OutletNotFoundError,
     PaymentMethodNotFoundError,
     PickupOnlyError,
+    ProductsShortageError,
 )
 from app.modules.orders.models import DeliveryType, OrderStatus
 from app.modules.orders.repository import OrderRepository, OutletReadRepository
@@ -111,10 +116,17 @@ class OrderService:
         # 6. Собираем snapshot позиций из catalog_items
         snapshot_items = []
         subtotal = Decimal("0.00")
+        goden_point = outlet["goden_point_id"]
+        portions: Counter[uuid.UUID] = Counter()
         for bucket_item in cart_items:
             catalog = await self._catalog.get_catalog_item(bucket_item.catalog_item_id)
             if not catalog:
                 continue
+            if goden_point:
+                # у заведения с точкой Goden продаются только товары, связанные с блюдами
+                if catalog["goden_dish_id"] is None:
+                    raise ItemNotSoldError(catalog["name"])
+                portions[catalog["goden_dish_id"]] += bucket_item.quantity
             price = Decimal(str(catalog["price"]))
             subtotal += price * bucket_item.quantity
             snapshot_items.append({
@@ -129,6 +141,62 @@ class OrderService:
             raise MinOrderPriceError(outlet["min_order_price"])
         total_price = subtotal + delivery_fee
 
+        # 8. Заказ на кухню точки Goden: последним перед сохранением, после всех проверок Мигома
+        goden_order = await self._order_in_goden(goden_point, data.outlet_id, portions) if goden_point else None
+        try:
+            order = await self._save_order(
+                current_user, data, cart_items, total_price, snapshot_items, goden_point, goden_order
+            )
+        except Exception:
+            # Goden принял заказ, а Мигом его не сохранил: продукты возвращаются на склад
+            if goden_order:
+                await self._cancel_in_goden(goden_point, uuid.UUID(goden_order["id"]), "не сохранён в Мигоме")
+            raise
+
+        # 12. Для доставки - сразу предлагаем заказ ближайшему курьеру
+        if data.delivery_type == DeliveryType.delivery and address:
+            try:
+                await self._offer_order_to_next_courier(
+                    order.id,
+                    float(address.latitude),
+                    float(address.longitude),
+                )
+            except Exception:
+                logger.exception("Ошибка при поиске курьера для заказа %s", order.id)
+
+        return await self._get_full_response(order.id)
+
+    async def _order_in_goden(self, point_id: uuid.UUID, outlet_id: int, portions: Counter) -> dict:
+        """Оформляет заказ в Goden. Нехватка продуктов, неподтверждённая точка - 409 без заказа."""
+        if not await goden.confirmed(point_id, outlet_id):
+            raise OutletNotAcceptingError()
+        try:
+            placed = await goden.place_order(point_id, dict(portions))
+        except goden.GodenRefusedError as e:
+            logger.warning("Goden отказал в заказе на точке %s: %s", point_id, e)
+            # 403 - точка больше не подключена; остальное - блюдо сняли с продажи
+            if e.status_code == 403:
+                raise OutletNotAcceptingError()
+            raise ProductsShortageError([])
+        if placed["status"] != "accepted":
+            names = [s["product"]["name"] for s in placed.get("shortages", []) if s.get("product")]
+            raise ProductsShortageError(names)
+        return placed
+
+    async def _cancel_in_goden(self, point_id: uuid.UUID, order_id: uuid.UUID, reason: str) -> None:
+        """Отменяет заказ в Goden. Сбой не мешает Мигому: продукты остаются списанными, это в журнале."""
+        try:
+            await goden.cancel_order(point_id, order_id)
+        except (goden.GodenUnavailableError, goden.GodenRefusedError) as e:
+            logger.warning("Заказ Goden %s (%s) не отменён, продукты остались списанными: %s", order_id, reason, e)
+
+    async def _return_to_goden(self, order) -> None:
+        """До начала готовки (new, assigned) отмена возвращает продукты на склад Goden. Позже кухня
+        уже готовит, и отмена меняет только статус в Мигоме."""
+        if order.goden_order_id and order.status in (OrderStatus.new, OrderStatus.assigned):
+            await self._cancel_in_goden(order.goden_point_id, order.goden_order_id, f"отмена заказа {order.id}")
+
+    async def _save_order(self, current_user, data, cart_items, total_price, snapshot_items, goden_point, goden_order):
         # 9. Создаём заказ
         order = await self._orders.create(
             customer_id=current_user.user_id,
@@ -140,6 +208,8 @@ class OrderService:
             customer_address_id=data.customer_address_id,
             comment=data.comment,
             leave_at_door=data.leave_at_door,
+            goden_point_id=goden_point,
+            goden_order_id=uuid.UUID(goden_order["id"]) if goden_order else None,
         )
         await self._orders.add_items(order.id, snapshot_items)
         await self._orders.add_status_history(order.id, OrderStatus.new, current_user.user_id)
@@ -156,19 +226,7 @@ class OrderService:
             "delivery_type": data.delivery_type.value,
             "items": [{"catalog_item_id": i["catalog_item_id"], "quantity": i["quantity"]} for i in snapshot_items],
         })
-
-        # 12. Для доставки - сразу предлагаем заказ ближайшему курьеру
-        if data.delivery_type == DeliveryType.delivery and address:
-            try:
-                await self._offer_order_to_next_courier(
-                    order.id,
-                    float(address.latitude),
-                    float(address.longitude),
-                )
-            except Exception:
-                logger.exception("Ошибка при поиске курьера для заказа %s", order.id)
-
-        return await self._get_full_response(order.id)
+        return order
 
     async def get_my_orders(
         self, current_user: TokenData, offset: int, limit: int
@@ -198,6 +256,7 @@ class OrderService:
         if order.status != OrderStatus.new:
             raise OrderInvalidStatusError("Покупатель может отменить заказ только в статусе 'new'")
 
+        await self._return_to_goden(order)
         updated = await self._orders.update_status(order, OrderStatus.cancelled, current_user.user_id)
         await self._publish_status_event(updated)
         return await self._to_response(updated)
@@ -417,6 +476,7 @@ class OrderService:
         if order.status in (OrderStatus.delivered, OrderStatus.received, OrderStatus.cancelled):
             raise OrderInvalidStatusError("Нельзя отменить завершённый заказ")
 
+        await self._return_to_goden(order)
         updated = await self._orders.update_status(order, OrderStatus.cancelled, current_user.user_id)
         if updated.courier_id:
             await self._clear_courier_active_order(updated.courier_id)
@@ -488,6 +548,7 @@ class OrderService:
         if order.status in (OrderStatus.delivered, OrderStatus.received, OrderStatus.cancelled):
             raise OrderInvalidStatusError("Нельзя отменить завершённый заказ")
 
+        await self._return_to_goden(order)
         updated = await self._orders.update_status(order, OrderStatus.cancelled, current_user.user_id)
         if updated.courier_id:
             await self._clear_courier_active_order(updated.courier_id)

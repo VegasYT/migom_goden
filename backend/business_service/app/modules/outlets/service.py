@@ -1,3 +1,7 @@
+import logging
+import uuid
+
+from app.core import goden
 from app.core.cache import cache_delete, cache_get, cache_set
 from app.modules.catalog.repository import CatalogRepository
 from app.modules.catalog.schemas import CatalogItemResponse, CategoryWithItemsResponse
@@ -23,8 +27,12 @@ from app.modules.outlets.schemas import (
 from app.modules.users.models import User
 
 
-_OUTLET_MENU_CACHE_KEY = "outlet_menu:{outlet_id}"
+logger = logging.getLogger(__name__)
+
+OUTLET_MENU_CACHE_KEY = "outlet_menu:{outlet_id}"
 _OUTLET_MENU_CACHE_TTL = 300  # 5 минут
+# наличие у заведения с точкой Goden меняется с каждым заказом и поставкой
+_GODEN_MENU_CACHE_TTL = 20
 
 
 class OutletService:
@@ -99,7 +107,7 @@ class OutletService:
         await self._repo.delete(outlet)
 
     async def get_outlet_menu(self, outlet_id: int) -> OutletMenuResponse:
-        cached = await cache_get(_OUTLET_MENU_CACHE_KEY.format(outlet_id=outlet_id))
+        cached = await cache_get(OUTLET_MENU_CACHE_KEY.format(outlet_id=outlet_id))
         if cached:
             return OutletMenuResponse(**cached)
 
@@ -109,6 +117,12 @@ class OutletService:
 
         items = await self._catalog_repo.list_items_with_categories(outlet.company_id)
         unavailable_ids = await self._repo.get_unavailable_item_ids(outlet_id)
+        if outlet.goden_point_id:
+            # у заведения с точкой Goden продаются только товары, связанные с блюдами
+            items = [i for i in items if i.goden_dish_id is not None]
+            sellable = await self._goden_sellable(outlet)
+            if sellable is not None:
+                items = [i for i in items if i.goden_dish_id in sellable]
 
         grouped: dict[int, tuple] = {}
         for item in items:
@@ -133,11 +147,25 @@ class OutletService:
 
         response = OutletMenuResponse(outlet_id=outlet_id, categories=result_categories)
         await cache_set(
-            _OUTLET_MENU_CACHE_KEY.format(outlet_id=outlet_id),
+            OUTLET_MENU_CACHE_KEY.format(outlet_id=outlet_id),
             response.model_dump(mode="json"),
-            ttl=_OUTLET_MENU_CACHE_TTL,
+            ttl=_GODEN_MENU_CACHE_TTL if outlet.goden_point_id else _OUTLET_MENU_CACHE_TTL,
         )
         return response
+
+    async def _goden_sellable(self, outlet) -> set[uuid.UUID] | None:
+        """Блюда точки Goden, которые можно приготовить. Пустое множество, если Goden не подтверждает
+        это заведение на точке; None, если Goden недоступен: тогда остаётся ручная доступность."""
+        try:
+            if not await goden.confirmed(outlet.goden_point_id, outlet.id):
+                return set()
+            menu = await goden.as_migom(lambda client: client.menu(outlet.goden_point_id))
+        except goden.GodenForbiddenError:
+            return set()
+        except goden.GodenUnavailableError:
+            logger.warning("Goden недоступен: меню заведения %s по ручной доступности", outlet.id)
+            return None
+        return {uuid.UUID(i["dish"]["id"]) for i in menu if i["available"]}
 
     async def list_items_availability(
         self, outlet_id: int, current_user: User
@@ -183,7 +211,7 @@ class OutletService:
         record = await self._repo.set_item_availability(
             outlet_id, catalog_item_id, is_available, data.stock_count
         )
-        await cache_delete(_OUTLET_MENU_CACHE_KEY.format(outlet_id=outlet_id))
+        await cache_delete(OUTLET_MENU_CACHE_KEY.format(outlet_id=outlet_id))
         return ItemAvailabilityResponse.model_validate(record)
 
     # --- Менеджеры ---
