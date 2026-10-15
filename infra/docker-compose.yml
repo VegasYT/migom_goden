@@ -35,7 +35,8 @@ services:
       retries: 5
 
   minio:
-    image: minio/minio:latest
+    # MinIO больше не публикует образы на Docker Hub; pgsty/minio - сборка сообщества с той же точкой входа и mc
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     container_name: migom_minio
     restart: unless-stopped
     command: server /data --console-address ":9001"

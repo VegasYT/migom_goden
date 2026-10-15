@@ -53,7 +53,8 @@ services:
 
   migom-minio:
     <<: *restart
-    image: minio/minio:latest
+    # MinIO больше не публикует образы на Docker Hub; pgsty/minio - сборка сообщества с той же точкой входа и mc
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     command: server /data
     environment:
       MINIO_ROOT_USER: migom
