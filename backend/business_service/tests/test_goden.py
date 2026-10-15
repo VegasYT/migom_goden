@@ -118,6 +118,14 @@ def test_revoked_token_is_requested_again(migom):
     assert calls["tokens"] == 2
 
 
+def test_hot_dishes_in_priority_order():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == f"/api/v1/points/{POINT}/recommendations/dishes"
+        return httpx.Response(200, json={"items": [{"dish": {"id": str(POINT)}}, {"dish": {"id": str(uuid.UUID(int=1))}}], "total": 2})
+
+    assert asyncio.run(_client(handler).hot_dishes(POINT)) == [POINT, uuid.UUID(int=1)]
+
+
 def test_network_failure_is_unavailable():
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("refused")

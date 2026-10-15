@@ -178,6 +178,8 @@ class CompanyMenu {
   final double? rating;
   final int? reviewCount;
   final List<MenuCategory> categories;
+  // горячие предложения Goden в меню заведения: товары, которые стоит продвигать
+  final List<int> hotItemIds;
 
   const CompanyMenu({
     required this.companyId,
@@ -187,6 +189,7 @@ class CompanyMenu {
     this.rating,
     this.reviewCount,
     required this.categories,
+    this.hotItemIds = const [],
   });
 
   List<MenuItem> get allItems =>
@@ -203,6 +206,9 @@ class CompanyMenu {
       reviewCount: json['review_count'] as int?,
       categories: categoriesJson
           .map((e) => MenuCategory.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      hotItemIds: (json['hot_offers'] as List<dynamic>? ?? [])
+          .map((e) => (e as Map<String, dynamic>)['catalog_item_id'] as int)
           .toList(),
     );
   }

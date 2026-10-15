@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../domain/company_model.dart';
 import '../providers/cart_provider.dart';
-import '../providers/companies_provider.dart';
+import '../providers/restaurant_menu_provider.dart';
 import '../widgets/restaurant/restaurant_cart_bar.dart';
 import 'home_screen.dart';
 import '../widgets/restaurant/restaurant_category_bar.dart';
@@ -20,7 +20,7 @@ class RestaurantScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final menuAsync = ref.watch(companyMenuProvider(restaurantId));
+    final menuAsync = ref.watch(restaurantMenuProvider(restaurantId));
     final colorScheme = Theme.of(context).colorScheme;
 
     return menuAsync.when(

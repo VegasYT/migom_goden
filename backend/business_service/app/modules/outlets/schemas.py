@@ -88,9 +88,16 @@ class ItemAvailabilityWithInfoResponse(BaseModel):
     stock_count: int | None
 
 
+class HotOfferResponse(BaseModel):
+    """Товар, который точка Goden советует продвигать."""
+    catalog_item_id: int
+
+
 class OutletMenuResponse(BaseModel):
     outlet_id: int
     categories: list[CategoryWithItemsResponse]
+    # горячие предложения Goden в порядке приоритета; у заведения без Goden пусто
+    hot_offers: list[HotOfferResponse] = []
 
 
 class OutletManagerAdd(BaseModel):

@@ -108,6 +108,13 @@ class GodenClient:
         """Блюда, которые продаются на точке Goden: [{id, name}]."""
         return [item["dish"] for item in await self.menu(point_id)]
 
+    async def hot_dishes(self, point_id: uuid.UUID, limit: int = 10) -> list[uuid.UUID]:
+        """Блюда горячих предложений точки (что Goden советует продвигать), от самого приоритетного."""
+        page = (await self._request(
+            "GET", f"/points/{point_id}/recommendations/dishes", params={"limit": limit}
+        )).json()
+        return [uuid.UUID(item["dish"]["id"]) for item in page["items"]]
+
     async def migom_points(self) -> list[dict]:
         """Пары "точка - заведение" работающих точек: [{point_id, outlet_id}]. Только для migom-integration."""
         return (await self._request("GET", "/migom/points")).json()

@@ -20,6 +20,7 @@ from app.modules.outlets.schemas import (
     ItemAvailabilityWithInfoResponse,
     OutletCreate,
     OutletManagerResponse,
+    HotOfferResponse,
     OutletMenuResponse,
     OutletResponse,
     OutletUpdate,
@@ -117,12 +118,19 @@ class OutletService:
 
         items = await self._catalog_repo.list_items_with_categories(outlet.company_id)
         unavailable_ids = await self._repo.get_unavailable_item_ids(outlet_id)
+        hot_offers: list[HotOfferResponse] = []
         if outlet.goden_point_id:
             # у заведения с точкой Goden продаются только товары, связанные с блюдами
             items = [i for i in items if i.goden_dish_id is not None]
             sellable = await self._goden_sellable(outlet)
             if sellable is not None:
                 items = [i for i in items if i.goden_dish_id in sellable]
+                on_menu = {i.goden_dish_id: i.id for i in items if i.id not in unavailable_ids}
+                hot_offers = [
+                    HotOfferResponse(catalog_item_id=on_menu[dish])
+                    for dish in await self._goden_hot(outlet)
+                    if dish in on_menu
+                ]
 
         grouped: dict[int, tuple] = {}
         for item in items:
@@ -145,13 +153,21 @@ class OutletService:
             for cat, cat_items in sorted(grouped.values(), key=lambda x: x[0].sort_order)
         ]
 
-        response = OutletMenuResponse(outlet_id=outlet_id, categories=result_categories)
+        response = OutletMenuResponse(outlet_id=outlet_id, categories=result_categories, hot_offers=hot_offers)
         await cache_set(
             OUTLET_MENU_CACHE_KEY.format(outlet_id=outlet_id),
             response.model_dump(mode="json"),
             ttl=_GODEN_MENU_CACHE_TTL if outlet.goden_point_id else _OUTLET_MENU_CACHE_TTL,
         )
         return response
+
+    async def _goden_hot(self, outlet) -> list[uuid.UUID]:
+        """Горячие предложения точки Goden; без них меню всё равно показывается."""
+        try:
+            return await goden.as_migom(lambda client: client.hot_dishes(outlet.goden_point_id))
+        except (goden.GodenForbiddenError, goden.GodenUnavailableError):
+            logger.warning("Горячие предложения Goden недоступны для заведения %s", outlet.id)
+            return []
 
     async def _goden_sellable(self, outlet) -> set[uuid.UUID] | None:
         """Блюда точки Goden, которые можно приготовить. Пустое множество, если Goden не подтверждает
