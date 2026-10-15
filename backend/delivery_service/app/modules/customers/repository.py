@@ -30,7 +30,8 @@ class AddressRepository:
         await self._session.refresh(address)
         return address
 
-    async def update(self, address: CustomerAddress, **fields) -> CustomerAddress:
+    async def update(self, address: CustomerAddress, /, **fields) -> CustomerAddress:
+        # address - позиционный: у адреса есть поле с тем же именем
         for key, value in fields.items():
             if value is not None:
                 setattr(address, key, value)
