@@ -1,61 +1,50 @@
-"""Фоновый воркер: слушает Redis keyspace events на истечение offer:{order_id}.
+"""Фоновый воркер: предлагает курьерам новые заказы доставки без действующего оффера.
 
-Когда TTL оффера истекает - курьер не ответил вовремя.
-Воркер предлагает заказ следующему доступному курьеру.
+Оффер живёт _OFFER_TTL_SEC: если курьер не ответил, был не в сети или свободного курьера
+не нашлось, заказ предлагается снова при следующем проходе, пока его не примут или не отменят.
 """
 import asyncio
 import logging
 
 from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func, or_, select
 
 from app.db.session import AsyncSessionFactory
 
 logger = logging.getLogger(__name__)
 
-_OFFER_KEY_PREFIX = b"offer:"
-_OFFER_REJECTED_SUFFIX = b":rejected"
+_SWEEP_SEC = 5
 
 
 async def watch_expired_offers(redis: Redis) -> None:
     """Запускается один раз при старте приложения как asyncio-задача."""
-    # Отдельный pubsub-клиент (не разделяем с основным redis)
-    pubsub = redis.pubsub()
-    await pubsub.subscribe("__keyevent@1__:expired")
-    logger.info("offer_worker: подписался на Redis keyspace events")
+    from app.modules.orders.models import DeliveryType, Order, OrderStatus
 
-    try:
-        async for message in pubsub.listen():
-            if message["type"] != "message":
-                continue
-            key: bytes = message["data"]
-
-            # Нас интересуют только offer:{order_id}, но не offer:{order_id}:rejected
-            if not key.startswith(_OFFER_KEY_PREFIX):
-                continue
-            if key.endswith(_OFFER_REJECTED_SUFFIX):
-                continue
-
-            try:
-                order_id = int(key[len(_OFFER_KEY_PREFIX):])
-            except ValueError:
-                continue
-
-            logger.info("offer_worker: оффер для заказа %s истёк, ищем следующего курьера", order_id)
-            asyncio.create_task(_handle_expired_offer(redis, order_id))
-
-    except asyncio.CancelledError:
-        logger.info("offer_worker: остановлен")
-    finally:
-        await pubsub.unsubscribe()
+    while True:
+        await asyncio.sleep(_SWEEP_SEC)
+        try:
+            async with AsyncSessionFactory() as session:
+                order_ids = (await session.execute(
+                    select(Order.id).where(
+                        Order.status == OrderStatus.new,
+                        Order.delivery_type == DeliveryType.delivery,
+                        or_(Order.offer_expires_at.is_(None), Order.offer_expires_at < func.now()),
+                    )
+                )).scalars().all()
+            for order_id in order_ids:
+                await _handle_expired_offer(redis, order_id)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            # воркер не должен умирать от ошибки одного прохода
+            logger.exception("offer_worker: ошибка прохода")
 
 
 async def _handle_expired_offer(redis: Redis, order_id: int) -> None:
     """Сбрасываем оффер в БД и предлагаем заказ следующему курьеру."""
-    from app.modules.orders.repository import OrderRepository
+    from app.modules.orders.repository import OrderRepository, OutletReadRepository
     from app.modules.couriers.repository import CourierRepository
     from app.modules.shifts.repository import ShiftRepository
-    from app.modules.cart.repository import CartRepository, CatalogReadRepository
     from app.modules.orders.service import OrderService
 
     async with AsyncSessionFactory() as session:
@@ -75,7 +64,7 @@ async def _handle_expired_offer(redis: Redis, order_id: int) -> None:
         # Переиспользуем сервис для поиска следующего курьера
         service = OrderService(
             order_repo=order_repo,
-            outlet_repo=None,   # не нужен для этой операции
+            outlet_repo=OutletReadRepository(session),  # точка нужна для данных оффера
             cart_repo=None,
             catalog_repo=None,
             courier_repo=CourierRepository(session),
