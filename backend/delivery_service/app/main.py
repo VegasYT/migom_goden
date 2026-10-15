@@ -8,6 +8,7 @@ from redis.asyncio import Redis
 
 from app.config import settings
 from app.core import kafka
+from app.core.goden_cancel_worker import watch_goden_cancellations
 from app.core.offer_worker import watch_expired_offers
 
 logger = logging.getLogger(__name__)
@@ -29,15 +30,18 @@ async def lifespan(app: FastAPI):
     # Фоновый воркер: предложение заказов курьерам при истечении оффера
     offer_task = asyncio.create_task(watch_expired_offers(app.state.redis))
     logger.info("offer_worker запущен")
+    # Фоновый воркер: отмены заказов сотрудниками точек Goden
+    goden_task = asyncio.create_task(watch_goden_cancellations(app.state.redis))
 
     yield
 
     # Завершение
-    offer_task.cancel()
-    try:
-        await offer_task
-    except asyncio.CancelledError:
-        pass
+    for task in (offer_task, goden_task):
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
     await app.state.redis.aclose()
     await kafka.stop_producer()
 

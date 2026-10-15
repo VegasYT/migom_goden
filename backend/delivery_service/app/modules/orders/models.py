@@ -19,6 +19,10 @@ class OrderStatus(PyEnum):
     received = "received"
 
 
+# завершённый заказ больше не отменяется
+FINISHED = (OrderStatus.delivered, OrderStatus.received, OrderStatus.cancelled)
+
+
 class DeliveryType(PyEnum):
     delivery = "delivery"
     pickup = "pickup"
@@ -57,6 +61,8 @@ class Order(Base):
     # заказ на кухню точки Goden: по нему отмена возвращает продукты на склад
     goden_point_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     goden_order_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
+    # причина отмены, которую видит покупатель: пока только отмена сотрудником точки Goden
+    cancel_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

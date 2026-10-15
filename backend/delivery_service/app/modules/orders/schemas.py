@@ -59,6 +59,8 @@ class OrderResponse(BaseModel):
     delivery_address: AddressResponse | None  # None для самовывоза
     total_price: Decimal
     comment: str | None
+    # причина отмены для покупателя, только у отменённого заказа
+    cancel_reason: str | None = None
     customer_payment_method_id: int
     delivery_time: int | None
     leave_at_door: bool

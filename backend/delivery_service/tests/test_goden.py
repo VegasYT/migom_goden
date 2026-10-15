@@ -83,3 +83,18 @@ def test_revoked_token_is_requested_again(server):
     assert not asyncio.run(goden.confirmed(POINT, 8))
     # второй вызов взял пары из кеша
     assert state["tokens"] == 2 and len(state["requests"]) == 2
+
+
+def test_order_is_read(server):
+    state = server(lambda request: httpx.Response(200, json={"id": "o", "status": "cancelled", "cancel_comment": "нет курицы"}))
+    order = asyncio.run(goden.order(POINT, DISH))
+    assert order["status"] == "cancelled" and order["cancel_comment"] == "нет курицы"
+    assert state["requests"][0].url.path == f"/api/v1/points/{POINT}/orders/{DISH}"
+
+    server(lambda request: httpx.Response(404))
+    with pytest.raises(goden.GodenRefusedError):
+        asyncio.run(goden.order(POINT, DISH))
+
+    server(lambda request: httpx.Response(503))
+    with pytest.raises(goden.GodenUnavailableError):
+        asyncio.run(goden.order(POINT, DISH))

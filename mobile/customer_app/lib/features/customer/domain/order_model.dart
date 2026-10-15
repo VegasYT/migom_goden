@@ -90,6 +90,8 @@ class PastOrderModel {
   final int itemsCount;
   final OrderStatus status;
   final List<OrderItem> items;
+  // причина отмены, если заказ отменил ресторан
+  final String? cancelReason;
 
   const PastOrderModel({
     required this.id,
@@ -100,6 +102,7 @@ class PastOrderModel {
     required this.itemsCount,
     required this.status,
     required this.items,
+    this.cancelReason,
   });
 }
 
@@ -112,6 +115,7 @@ class ApiOrderModel {
   final double totalPrice;
   final double deliveryFee;
   final String? comment;
+  final String? cancelReason;
   final bool leaveAtDoor;
   final String createdAt;
   final int outletId;
@@ -129,6 +133,7 @@ class ApiOrderModel {
     required this.totalPrice,
     required this.deliveryFee,
     this.comment,
+    this.cancelReason,
     this.leaveAtDoor = false,
     required this.createdAt,
     required this.outletId,
@@ -190,6 +195,7 @@ class ApiOrderModel {
       totalPrice: double.tryParse(json['total_price'].toString()) ?? 0,
       deliveryFee: double.tryParse(json['delivery_fee']?.toString() ?? '0') ?? 0,
       comment: json['comment'] as String?,
+      cancelReason: json['cancel_reason'] as String?,
       leaveAtDoor: json['leave_at_door'] as bool? ?? false,
       createdAt: json['created_at'] as String? ?? '',
       outletId: json['outlet_id'] as int? ?? 0,
@@ -215,6 +221,7 @@ class ApiOrderModel {
       items: items
           .map((i) => OrderItem(name: i.name, quantity: i.quantity, price: i.price))
           .toList(),
+      cancelReason: cancelReason,
     );
   }
 }

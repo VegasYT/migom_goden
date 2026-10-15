@@ -33,7 +33,7 @@ from app.modules.orders.exceptions import (
     PickupOnlyError,
     ProductsShortageError,
 )
-from app.modules.orders.models import DeliveryType, OrderStatus
+from app.modules.orders.models import FINISHED, DeliveryType, OrderStatus
 from app.modules.orders.repository import OrderRepository, OutletReadRepository
 from app.modules.customers.schemas import AddressResponse
 from app.modules.orders.schemas import (
@@ -49,6 +49,8 @@ from app.modules.shifts.repository import ShiftRepository
 logger = logging.getLogger(__name__)
 
 _COURIER_STATE_TTL = 1800
+# changed_by отмены сотрудником Goden: пользователя Мигома у неё нет
+GODEN_STAFF = 0
 _COURIER_STATE_KEY = "courier:{courier_id}:state"
 
 # Параметры доставки платформы
@@ -555,6 +557,21 @@ class OrderService:
         await self._publish_status_event(updated)
         return await self._to_response(updated)
 
+    # --- Goden ---
+
+    async def cancel_from_goden(self, order_id: int, reason: str) -> bool:
+        """Заказ отменил сотрудник точки Goden. Продукты Goden вернул сам, поэтому к нему не обращаемся.
+        Статус перечитывается: заведение могло завершить или отменить заказ, пока шёл опрос."""
+        order = await self._orders.get_by_id(order_id)
+        if not order or order.status in FINISHED:
+            return False
+        order.cancel_reason = reason
+        updated = await self._orders.update_status(order, OrderStatus.cancelled, GODEN_STAFF)
+        if updated.courier_id:
+            await self._clear_courier_active_order(updated.courier_id)
+        await self._publish_status_event(updated)
+        return True
+
     # --- Вспомогательные методы ---
 
     def _check_outlet_open(self, outlet: dict) -> None:
@@ -773,4 +790,5 @@ class OrderService:
             updated_at=order.updated_at,
             items=items,
             status_history=history,
+            cancel_reason=order.cancel_reason,
         )

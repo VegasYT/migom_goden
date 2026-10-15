@@ -110,6 +110,16 @@ class PastOrderDetailSheet extends StatelessWidget {
                         ],
                       ),
                     ),
+                    if (order.cancelReason != null) ...[
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Text(
+                          'Причина отмены: ${order.cancelReason}',
+                          style: TextStyle(fontSize: 13, color: colorScheme.error),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     Divider(height: 1, color: colorScheme.outlineVariant),
                     const SizedBox(height: 16),

@@ -125,6 +125,11 @@ async def place_order(point_id: uuid.UUID, portions: dict[uuid.UUID, int]) -> di
     return response.json()
 
 
+async def order(point_id: uuid.UUID, order_id: uuid.UUID) -> dict:
+    """Заказ Goden: по нему Мигом узнаёт, что сотрудник точки отменил заказ."""
+    return (await _request("GET", f"/points/{point_id}/orders/{order_id}")).json()
+
+
 async def cancel_order(point_id: uuid.UUID, order_id: uuid.UUID) -> None:
     """Отменяет заказ в Goden: продукты возвращаются в партии."""
     await _request("POST", f"/points/{point_id}/orders/{order_id}/cancel", headers={"Idempotency-Key": str(order_id)})
