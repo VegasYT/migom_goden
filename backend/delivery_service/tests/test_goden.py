@@ -98,3 +98,15 @@ def test_order_is_read(server):
     server(lambda request: httpx.Response(503))
     with pytest.raises(goden.GodenUnavailableError):
         asyncio.run(goden.order(POINT, DISH))
+
+
+def test_menu_reads_every_page(server):
+    def handler(request: httpx.Request) -> httpx.Response:
+        offset = int(request.url.params["offset"])
+        dishes = [{"dish": {"id": f"d{offset + i}", "name": "x"}, "available": True, "portions": 1} for i in range(2)]
+        return httpx.Response(200, json={"items": dishes if offset < 4 else [], "total": 4})
+
+    state = server(handler)
+    menu = asyncio.run(goden.menu(POINT))
+    assert [m["dish"]["id"] for m in menu] == ["d0", "d1", "d2", "d3"]
+    assert len(state["requests"]) == 2

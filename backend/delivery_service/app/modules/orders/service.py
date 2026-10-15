@@ -32,6 +32,7 @@ from app.modules.orders.exceptions import (
     PaymentMethodNotFoundError,
     PickupOnlyError,
     ProductsShortageError,
+    UnavailableItemsError,
 )
 from app.modules.orders.models import FINISHED, DeliveryType, OrderStatus
 from app.modules.orders.repository import OrderRepository, OutletReadRepository
@@ -51,6 +52,18 @@ logger = logging.getLogger(__name__)
 _COURIER_STATE_TTL = 1800
 # changed_by отмены сотрудником Goden: пользователя Мигома у неё нет
 GODEN_STAFF = 0
+
+
+def unavailable_items(portions: Counter, names: dict[uuid.UUID, str], menu: list[dict]) -> list[str]:
+    """Блюда заказа, которых в меню точки Goden меньше, чем заказано: "Маргарита - нет в наличии".
+    Блюда нет в меню - его сняли с продажи."""
+    left = {uuid.UUID(m["dish"]["id"]): m["portions"] if m["available"] else 0 for m in menu}
+    items = []
+    for dish, wanted in portions.items():
+        have = left.get(dish, 0)
+        if have < wanted:
+            items.append(f"{names[dish]} - " + ("нет в наличии" if have == 0 else f"можно не больше {have}"))
+    return items
 _COURIER_STATE_KEY = "courier:{courier_id}:state"
 
 # Параметры доставки платформы
@@ -120,6 +133,7 @@ class OrderService:
         subtotal = Decimal("0.00")
         goden_point = outlet["goden_point_id"]
         portions: Counter[uuid.UUID] = Counter()
+        names: dict[uuid.UUID, str] = {}
         for bucket_item in cart_items:
             catalog = await self._catalog.get_catalog_item(bucket_item.catalog_item_id)
             if not catalog:
@@ -129,6 +143,7 @@ class OrderService:
                 if catalog["goden_dish_id"] is None:
                     raise ItemNotSoldError(catalog["name"])
                 portions[catalog["goden_dish_id"]] += bucket_item.quantity
+                names.setdefault(catalog["goden_dish_id"], catalog["name"])
             price = Decimal(str(catalog["price"]))
             subtotal += price * bucket_item.quantity
             snapshot_items.append({
@@ -144,7 +159,7 @@ class OrderService:
         total_price = subtotal + delivery_fee
 
         # 8. Заказ на кухню точки Goden: последним перед сохранением, после всех проверок Мигома
-        goden_order = await self._order_in_goden(goden_point, data.outlet_id, portions) if goden_point else None
+        goden_order = await self._order_in_goden(goden_point, data.outlet_id, portions, names) if goden_point else None
         try:
             order = await self._save_order(
                 current_user, data, cart_items, total_price, snapshot_items, goden_point, goden_order
@@ -168,7 +183,9 @@ class OrderService:
 
         return await self._get_full_response(order.id)
 
-    async def _order_in_goden(self, point_id: uuid.UUID, outlet_id: int, portions: Counter) -> dict:
+    async def _order_in_goden(
+        self, point_id: uuid.UUID, outlet_id: int, portions: Counter, names: dict[uuid.UUID, str]
+    ) -> dict:
         """Оформляет заказ в Goden. Нехватка продуктов, неподтверждённая точка - 409 без заказа."""
         if not await goden.confirmed(point_id, outlet_id):
             raise OutletNotAcceptingError()
@@ -179,11 +196,26 @@ class OrderService:
             # 403 - точка больше не подключена; остальное - блюдо сняли с продажи
             if e.status_code == 403:
                 raise OutletNotAcceptingError()
-            raise ProductsShortageError([])
+            await self._refuse_unavailable(point_id, portions, names, [])
         if placed["status"] != "accepted":
-            names = [s["product"]["name"] for s in placed.get("shortages", []) if s.get("product")]
-            raise ProductsShortageError(names)
+            products = [s["product"]["name"] for s in placed.get("shortages", []) if s.get("product")]
+            await self._refuse_unavailable(point_id, portions, names, products)
         return placed
+
+    async def _refuse_unavailable(
+        self, point_id: uuid.UUID, portions: Counter, names: dict[uuid.UUID, str], products: list[str]
+    ) -> None:
+        """Goden отказал: называем покупателю блюда корзины по меню точки, а без меню - продукты."""
+        try:
+            menu = await goden.menu(point_id)
+        except (goden.GodenUnavailableError, goden.GodenRefusedError) as e:
+            logger.warning("Меню точки Goden %s не прочитано после отказа: %s", point_id, e)
+            raise ProductsShortageError(products)
+        items = unavailable_items(portions, names, menu)
+        if items:
+            raise UnavailableItemsError(items)
+        # наличие успело вернуться между отказом и чтением меню
+        raise ProductsShortageError(products)
 
     async def _cancel_in_goden(self, point_id: uuid.UUID, order_id: uuid.UUID, reason: str) -> None:
         """Отменяет заказ в Goden. Сбой не мешает Мигому: продукты остаются списанными, это в журнале."""

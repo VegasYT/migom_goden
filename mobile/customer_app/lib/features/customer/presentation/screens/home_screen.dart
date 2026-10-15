@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/websocket_provider.dart';
 import '../../data/orders_service.dart';
+import '../../domain/order_model.dart';
 import '../providers/orders_provider.dart';
 import 'cart_screen.dart';
 import 'home_tab.dart';
@@ -52,8 +53,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         if (status == 'delivered' && orderId != null && !_confirmationShown) {
           _showDeliveryConfirmation(orderId);
         }
+        if (status == 'cancelled' && orderId != null) {
+          _showCancellation(orderId);
+        }
       });
     });
+  }
+
+  /// Заказ отменил ресторан: показываем причину. Отмена без причины - своя, о ней покупатель знает.
+  Future<void> _showCancellation(int orderId) async {
+    final ApiOrderModel order;
+    try {
+      order = await OrdersService().getOrder(orderId);
+    } catch (_) {
+      return;
+    }
+    final reason = order.cancelReason;
+    if (reason == null || !mounted) return;
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _CancelledSheet(
+        orderId: orderId,
+        reason: reason,
+        onClose: () => Navigator.of(ctx).pop(),
+      ),
+    );
   }
 
   void _showDeliveryConfirmation(int orderId) {
@@ -283,6 +310,67 @@ class _DeliveryConfirmSheetState extends State<_DeliveryConfirmSheet> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Text('Подтвердить получение', style: TextStyle(fontSize: 16)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Заказ отменён рестораном ─────────────────────────────────────────────────
+
+class _CancelledSheet extends StatelessWidget {
+  final int orderId;
+  final String reason;
+  final VoidCallback onClose;
+
+  const _CancelledSheet({required this.orderId, required this.reason, required this.onClose});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(context).padding.bottom + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: cs.outlineVariant,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: cs.errorContainer,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.cancel_rounded, size: 36, color: cs.onErrorContainer),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Ресторан отменил заказ №$orderId',
+            style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            reason,
+            style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: onClose,
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+            child: const Text('Понятно', style: TextStyle(fontSize: 16)),
           ),
         ],
       ),

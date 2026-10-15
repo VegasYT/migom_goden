@@ -17,6 +17,7 @@ _TIMEOUT = 10
 _PAIRS_TTL = 30
 # пары нет в кеше: заведение могли только что подключить, список перечитывается чаще
 _PAIRS_RECHECK = 5
+_MENU_PAGE = 200
 
 
 class GodenUnavailableError(HTTPException):
@@ -123,6 +124,19 @@ async def place_order(point_id: uuid.UUID, portions: dict[uuid.UUID, int]) -> di
         # ответ мог потеряться по дороге: повтор с тем же ключом не спишет продукты дважды
         response = await _request("POST", f"/points/{point_id}/orders", json=body, headers={"Idempotency-Key": key})
     return response.json()
+
+
+async def menu(point_id: uuid.UUID) -> list[dict]:
+    """Меню точки со всех страниц: [{dish: {id, name}, available, portions, ...}]. Число порций в нём
+    совпадает с решением заказа, поэтому по нему видно, какие блюда отказанного заказа не проходят."""
+    items: list[dict] = []
+    while True:
+        page = (await _request(
+            "GET", f"/points/{point_id}/menu", params={"limit": _MENU_PAGE, "offset": len(items)}
+        )).json()
+        items.extend(page["items"])
+        if not page["items"] or len(items) >= page["total"]:
+            return items
 
 
 async def order(point_id: uuid.UUID, order_id: uuid.UUID) -> dict:

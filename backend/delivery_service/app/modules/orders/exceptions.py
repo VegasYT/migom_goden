@@ -90,3 +90,10 @@ class ItemNotSoldError(ConflictError):
 class OutletNotAcceptingError(ConflictError):
     def __init__(self):
         super().__init__("Заведение сейчас не принимает заказы")
+
+
+class UnavailableItemsError(ConflictError):
+    """Goden отказал в заказе: блюда корзины, которых не хватает, с тем, сколько можно заказать."""
+
+    def __init__(self, items: list[str]):
+        super().__init__(f"Пока вы оформляли заказ, изменилось наличие: {'; '.join(items)}. Измените корзину")
