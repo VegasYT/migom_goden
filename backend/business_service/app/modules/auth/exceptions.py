@@ -50,3 +50,17 @@ class PhoneAlreadyExistsError(HTTPException):
             status_code=status.HTTP_409_CONFLICT,
             detail="Пользователь с таким номером телефона уже существует",
         )
+
+
+class RegistrationRequiredError(HTTPException):
+    def __init__(self):
+        super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail="registration_required")
+
+
+class AccountLinkRequiredError(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="В Мигоме уже есть учётная запись с этой почтой. Войдите с её паролем в мобильном приложении "
+                   "или подтвердите почту в Keycloak, чтобы связать её со входом",
+        )

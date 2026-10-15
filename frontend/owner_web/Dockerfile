@@ -9,7 +9,9 @@ COPY . .
 # Vite подставляет переменные VITE_* при сборке: адрес API и ключ Яндекс Карт вшиваются в бандл
 ARG VITE_API_URL
 ARG VITE_YANDEX_MAPS_API_KEY
-ENV VITE_API_URL=$VITE_API_URL VITE_YANDEX_MAPS_API_KEY=$VITE_YANDEX_MAPS_API_KEY
+# Keycloak Goden для единого входа; без аргумента - локальный http://localhost:8180
+ARG VITE_KEYCLOAK_URL
+ENV VITE_API_URL=$VITE_API_URL VITE_YANDEX_MAPS_API_KEY=$VITE_YANDEX_MAPS_API_KEY VITE_KEYCLOAK_URL=$VITE_KEYCLOAK_URL
 RUN pnpm build
 
 FROM caddy:2.10-alpine

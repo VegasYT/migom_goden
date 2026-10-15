@@ -8,7 +8,6 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
-import { useNavigate } from 'react-router';
 import { useAuthGuard, useAuthStore } from '@features/auth';
 import {
 	useOrganizationGuard,
@@ -22,8 +21,7 @@ import { AppLayout } from '../layouts/AppLayout';
 export default function MenuPage() {
 	useAuthGuard();
 	useOrganizationGuard();
-
-	const navigate = useNavigate();
+
 	const logout = useAuthStore((s) => s.logout);
 	const companyId = useOrganizationStore((s) => s.companyId);
 	const { data: org } = useOrganization(companyId);
@@ -34,8 +32,7 @@ export default function MenuPage() {
 	const [addItemOpen, setAddItemOpen] = useState(false);
 
 	const handleLogout = () => {
-		logout();
-		void navigate('/auth', { replace: true });
+		logout();
 	};
 
 	const categories = menu?.categories ?? [];

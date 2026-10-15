@@ -16,17 +16,22 @@ from app.modules.users.models import User
 bearer_scheme = HTTPBearer()
 
 
-async def get_current_user(
+async def get_token_claims(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
-    session: Annotated[AsyncSession, Depends(get_db)],
-) -> User:
+) -> dict:
+    """Проверенные утверждения токена Keycloak; пользователя Мигома может ещё не быть."""
     try:
-        payload = await decode_token(credentials.credentials)
+        return await decode_token(credentials.credentials)
     except JWTError:
         raise InvalidTokenError()
     except httpx.HTTPError:
         raise KeycloakUnavailableError()
 
+
+async def get_current_user(
+    payload: Annotated[dict, Depends(get_token_claims)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
     # токен Keycloak называет пользователя его id в realm, роль и блокировка - в базе Мигома
     repo = UserRepository(session)
     user = await repo.get_by_keycloak_id(payload["sub"])

@@ -48,3 +48,9 @@ class RoleResponse(BaseModel):
     is_assignable: bool
 
     model_config = {"from_attributes": True}
+
+
+class SessionRequest(BaseModel):
+    """Роль нового пользователя: её выбирает кабинет при первом входе. Существующему не нужна."""
+    role_id: int | None = None
+    phone: str | None = None

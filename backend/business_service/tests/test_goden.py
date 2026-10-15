@@ -1,24 +1,12 @@
 """Клиент API Goden без сети: ответы Goden подменяет httpx.MockTransport."""
 import asyncio
 import json
-import os
 import uuid
 
-# настройки читаются при импорте app.config; тесту база и MinIO не нужны
-os.environ.update({
-    "DB_HOST": "-", "DB_NAME": "-", "DB_USER": "-", "DB_PASSWORD": "-",
-    "MINIO_ENDPOINT": "-", "MINIO_ACCESS_KEY": "-", "MINIO_SECRET_KEY": "-",
-    "KEYCLOAK_REALM_URL": "http://keycloak/realms/goden",
-    "KEYCLOAK_ISSUER": "http://localhost:8180/realms/goden",
-    "KEYCLOAK_CLIENT_SECRET": "-",
-    "GODEN_API_URL": "http://goden/api/v1",
-    "GODEN_CLIENT_SECRET": "integration-secret",
-})
+import httpx
+import pytest
 
-import httpx  # noqa: E402
-import pytest  # noqa: E402
-
-from app.core import goden  # noqa: E402
+from app.core import goden
 
 POINT = uuid.UUID("0198c0de-0000-7000-8000-000000000012")
 

@@ -1,5 +1,4 @@
 import { createBrowserRouter } from 'react-router';
-import AuthPage from '@pages/AuthPage';
 import DashboardPage from '@pages/DashboardPage';
 import CompaniesPage from '@pages/CompaniesPage';
 import CompanyDetailPage from '@pages/CompanyDetailPage';
@@ -12,10 +11,6 @@ export const router = createBrowserRouter([
 	{
 		path: '/',
 		element: <DashboardPage />,
-	},
-	{
-		path: '/auth',
-		element: <AuthPage />,
 	},
 	{
 		path: '/companies',

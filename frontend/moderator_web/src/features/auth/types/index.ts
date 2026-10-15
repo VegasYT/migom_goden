@@ -1,16 +1,5 @@
 // types/index.ts - TypeScript типы фичи auth
 
-export interface TokenResponse {
-	access_token: string;
-	refresh_token: string;
-	token_type: string;
-}
-
-export interface LoginDto {
-	email: string;
-	password: string;
-}
-
 export interface AuthUser {
 	id: number;
 	email: string;
@@ -18,4 +7,5 @@ export interface AuthUser {
 	phone: string | null;
 	avatar_url: string | null;
 	is_active: boolean;
+	role: { id: number; name: string };
 }

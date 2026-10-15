@@ -3,15 +3,17 @@ from sqlalchemy.exc import IntegrityError
 from app.core import keycloak
 from app.core.security import verify_password
 from app.modules.auth.exceptions import (
+    AccountLinkRequiredError,
     InvalidCredentialsError,
     InvalidTokenError,
     PhoneAlreadyExistsError,
+    RegistrationRequiredError,
     RoleNotAssignableError,
     UserAlreadyExistsError,
     UserInactiveError,
 )
 from app.modules.auth.repository import UserRepository
-from app.modules.auth.schemas import IdentityResponse, LoginRequest, RegisterRequest, TokenResponse
+from app.modules.auth.schemas import IdentityResponse, LoginRequest, RegisterRequest, SessionRequest, TokenResponse
 from app.modules.users.models import User
 
 
@@ -90,6 +92,44 @@ class AuthService:
         keycloak_id = await keycloak.create_user(user.email, password, user.full_name)
         await self._repo.link_keycloak(user, keycloak_id)
         return await keycloak.password_grant(user.email, password)
+
+    async def session(self, claims: dict, data: SessionRequest) -> User:
+        """Пользователь Мигома по токену веб-кабинета. Новому заводит учётную запись с выбранной ролью."""
+        user = await self._repo.get_by_keycloak_id(claims["sub"])
+        if not user:
+            user = await self._first_session(claims, data)
+        if not user.is_active:
+            raise UserInactiveError()
+        return user
+
+    async def _first_session(self, claims: dict, data: SessionRequest) -> User:
+        email = claims.get("email")
+        if not email:
+            raise InvalidTokenError()
+        existing = await self._repo.get_by_email(email)
+        if existing:
+            # почту в Keycloak можно указать чужую: связываем, только если Keycloak её подтвердил
+            if existing.keycloak_id is None and claims.get("email_verified"):
+                await self._repo.link_keycloak(existing, claims["sub"])
+                return existing
+            raise AccountLinkRequiredError()
+        if data.role_id is None:
+            raise RegistrationRequiredError()
+        role = await self._repo.get_role_by_id(data.role_id)
+        if not role or not role.is_assignable:
+            raise RoleNotAssignableError()
+        try:
+            return await self._repo.create(
+                email=email,
+                keycloak_id=claims["sub"],
+                full_name=claims.get("name") or email,
+                role_id=data.role_id,
+                phone=data.phone,
+            )
+        except IntegrityError as e:
+            if "users_phone_key" in str(e.orig):
+                raise PhoneAlreadyExistsError()
+            raise
 
     async def refresh(self, refresh_token: str) -> TokenResponse:
         try:

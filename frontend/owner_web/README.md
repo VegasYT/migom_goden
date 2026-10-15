@@ -21,11 +21,15 @@
 | [tech-stack.md](./docs/tech-stack.md) | Стек технологий с паттернами использования |
 | [conventions.md](./docs/conventions.md) | Соглашения: именование, код-стайл, типовые паттерны |
 
+## Вход
+
+Вход только через Keycloak Goden (единый вход, клиент `migom-web`, тема страниц Goden): регистрация и пароль - на странице Keycloak, кабинет получает токен через `keycloak-js` (`src/shared/auth/keycloak.ts`). Адрес Keycloak - `VITE_KEYCLOAK_URL` (по умолчанию `http://localhost:8180`), dev-сервер - порт 5174: на него клиент разрешает возврат. При первом входе нового пользователя кабинет спрашивает, кто он: владелец бизнеса или менеджер точки, и заводит его в Мигоме (`POST /api/v1/auth/session`).
+
 ## Быстрый старт
 
 ```bash
 pnpm install
-pnpm dev        # http://localhost:5173
+pnpm dev        # http://localhost:5174
 pnpm build      # production build
 pnpm lint       # ESLint
 ```

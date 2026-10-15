@@ -4,9 +4,8 @@ import { useAuthStore } from '../model/authStore';
 import { ROLE_OUTLET_MANAGER } from '../types';
 
 /**
- * Перенаправляет неаутентифицированных пользователей на /auth.
  * Менеджеров торговых точек перенаправляет на /outlet-manager.
- * Используется на защищённых страницах owner-а.
+ * Используется на страницах владельца; без входа кабинет не открывается (SessionGate).
  */
 export function useAuthGuard() {
 	const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -14,52 +13,25 @@ export function useAuthGuard() {
 	const navigate = useNavigate();
 
 	useEffect(() => {
-		if (!isAuthenticated) {
-			void navigate('/auth', { replace: true });
-		} else if (user?.role?.id === ROLE_OUTLET_MANAGER) {
+		if (user?.role?.id === ROLE_OUTLET_MANAGER) {
 			void navigate('/outlet-manager', { replace: true });
 		}
-	}, [isAuthenticated, user, navigate]);
+	}, [user, navigate]);
 
 	return { isAuthenticated };
 }
 
-/**
- * Guard для страницы менеджера точки.
- * Перенаправляет на /auth если не авторизован, на / если не менеджер.
- */
+/** Guard для страницы менеджера точки: остальных перенаправляет на /. */
 export function useOutletManagerGuard() {
 	const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 	const user = useAuthStore((s) => s.user);
 	const navigate = useNavigate();
 
 	useEffect(() => {
-		if (!isAuthenticated) {
-			void navigate('/auth', { replace: true });
-		} else if (user && user.role?.id !== ROLE_OUTLET_MANAGER) {
+		if (user && user.role?.id !== ROLE_OUTLET_MANAGER) {
 			void navigate('/', { replace: true });
 		}
-	}, [isAuthenticated, user, navigate]);
+	}, [user, navigate]);
 
 	return { isAuthenticated };
-}
-
-/**
- * Перенаправляет аутентифицированных пользователей на / или /outlet-manager.
- * Используется на странице авторизации.
- */
-export function useGuestGuard() {
-	const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-	const user = useAuthStore((s) => s.user);
-	const navigate = useNavigate();
-
-	useEffect(() => {
-		if (isAuthenticated) {
-			if (user?.role?.id === ROLE_OUTLET_MANAGER) {
-				void navigate('/outlet-manager', { replace: true });
-			} else {
-				void navigate('/', { replace: true });
-			}
-		}
-	}, [isAuthenticated, user, navigate]);
 }

@@ -7,4 +7,6 @@ export default defineConfig({
 	resolve: {
 		tsconfigPaths: true,
 	},
+	// клиент Keycloak migom-web разрешает возврат на этот порт; 5173 занят frontend Goden
+	server: { port: 5174, strictPort: true },
 });

@@ -17,7 +17,6 @@ import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import type { ElementType } from 'react';
-import { useNavigate } from 'react-router';
 import { useAuthGuard, useAuthStore } from '@features/auth';
 import {
 	useOrganizationGuard,
@@ -227,8 +226,7 @@ const STATUS_BAR_COLORS: Record<string, string> = {
 export default function AnalyticsPage() {
 	useAuthGuard();
 	useOrganizationGuard();
-
-	const navigate = useNavigate();
+
 	const logout = useAuthStore((s) => s.logout);
 	const companyId = useOrganizationStore((s) => s.companyId);
 	const { data: org } = useOrganization(companyId);
@@ -237,8 +235,7 @@ export default function AnalyticsPage() {
 	const { data, isLoading, isError } = useOrders({ limit: 100, sort_by: 'created_at', sort_order: 'desc' });
 
 	const handleLogout = () => {
-		logout();
-		void navigate('/auth', { replace: true });
+		logout();
 	};
 
 	const orders = data?.items ?? [];

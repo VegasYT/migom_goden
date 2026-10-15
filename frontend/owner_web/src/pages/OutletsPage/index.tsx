@@ -8,7 +8,6 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
-import { useNavigate } from 'react-router';
 import { useAuthGuard, useAuthStore } from '@features/auth';
 import {
 	useOrganizationGuard,
@@ -26,8 +25,7 @@ import { AppLayout } from '../layouts/AppLayout';
 export default function OutletsPage() {
 	useAuthGuard();
 	useOrganizationGuard();
-
-	const navigate = useNavigate();
+
 	const logout = useAuthStore((s) => s.logout);
 	const companyId = useOrganizationStore((s) => s.companyId);
 	const { data: org } = useOrganization(companyId);
@@ -36,8 +34,7 @@ export default function OutletsPage() {
 	const [createOpen, setCreateOpen] = useState(false);
 
 	const handleLogout = () => {
-		logout();
-		void navigate('/auth', { replace: true });
+		logout();
 	};
 
 	return (

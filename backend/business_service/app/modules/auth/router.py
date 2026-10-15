@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_token_claims
 from app.db.session import get_db
 from app.modules.auth.repository import UserRepository
 from app.modules.auth.schemas import (
@@ -13,10 +13,12 @@ from app.modules.auth.schemas import (
     RefreshRequest,
     RegisterRequest,
     RoleResponse,
+    SessionRequest,
     TokenResponse,
 )
 from app.modules.auth.service import AuthService
 from app.modules.users.models import User
+from app.modules.users.schemas import UserResponse
 
 router = APIRouter(prefix="/auth", tags=["Аутентификация"])
 
@@ -68,6 +70,17 @@ async def logout(
 ):
     """Выход из системы. Переданный refresh-токен отзывается в Keycloak."""
     await service.logout(data.refresh_token if data else None)
+
+
+@router.post("/session", response_model=UserResponse)
+async def session(
+    claims: Annotated[dict, Depends(get_token_claims)],
+    service: Annotated[AuthService, Depends(_get_service)],
+    data: SessionRequest | None = None,
+):
+    """Вход в веб-кабинет через Keycloak: пользователь Мигома по токену. Нового пользователя с выбранной
+    ролью заводит; без роли - 404 registration_required."""
+    return await service.session(claims, data or SessionRequest())
 
 
 @router.get("/identity", response_model=IdentityResponse)

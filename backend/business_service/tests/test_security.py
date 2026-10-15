@@ -1,23 +1,13 @@
 """Проверка access-токенов Keycloak без сети: ключи realm подменяются ключом теста."""
 import asyncio
-import os
 import time
 
-# настройки читаются при импорте app.config; тесту база и MinIO не нужны
-os.environ.update({
-    "DB_HOST": "-", "DB_NAME": "-", "DB_USER": "-", "DB_PASSWORD": "-",
-    "MINIO_ENDPOINT": "-", "MINIO_ACCESS_KEY": "-", "MINIO_SECRET_KEY": "-",
-    "KEYCLOAK_REALM_URL": "http://keycloak/realms/goden",
-    "KEYCLOAK_ISSUER": "http://localhost:8180/realms/goden",
-    "KEYCLOAK_CLIENT_SECRET": "-",
-})
+import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from jose import JWTError, jwk, jwt
 
-import pytest  # noqa: E402
-from cryptography.hazmat.primitives import serialization  # noqa: E402
-from cryptography.hazmat.primitives.asymmetric import rsa  # noqa: E402
-from jose import JWTError, jwk, jwt  # noqa: E402
-
-from app.core import security  # noqa: E402
+from app.core import security
 
 ISSUER = "http://localhost:8180/realms/goden"
 

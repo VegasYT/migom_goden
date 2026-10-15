@@ -18,7 +18,7 @@ import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useSearchParams } from 'react-router';
 import { useOutletManagerGuard, useAuthStore } from '@features/auth';
 import { useOrders, OrderRow, OrderFilters } from '@features/orders';
 import type { OrderStatus, SortField, SortOrder } from '@features/orders';
@@ -37,8 +37,7 @@ function clampLimit(v: number) {
 
 export default function OutletManagerPage() {
 	useOutletManagerGuard();
-
-	const navigate = useNavigate();
+
 	const logout = useAuthStore((s) => s.logout);
 	const user = useAuthStore((s) => s.user);
 
@@ -88,8 +87,7 @@ export default function OutletManagerPage() {
 	};
 
 	const handleLogout = () => {
-		logout();
-		void navigate('/auth', { replace: true });
+		logout();
 	};
 
 	const orders = data?.items ?? [];

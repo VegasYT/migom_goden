@@ -1,7 +1,6 @@
 // features/auth/index.ts - barrel: публичный API фичи
 
-export { LoginForm } from './ui/LoginForm';
+export { SessionGate } from './ui/SessionGate';
 export { useAuthStore } from './model/authStore';
-export { useLogin } from './api/useLogin';
-export { useAuthGuard, useGuestGuard } from './lib/useAuthGuard';
-export type { AuthUser, LoginDto, TokenResponse } from './types';
+export { useAuthGuard } from './lib/useAuthGuard';
+export type { AuthUser } from './types';

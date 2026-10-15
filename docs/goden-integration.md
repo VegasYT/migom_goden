@@ -25,6 +25,8 @@ OpenSpec change `keycloak-auth` в Мигоме, клиенты realm - change `
 
 ## 2. Вход через Keycloak, этап 2 (единый вход в вебе)
 
+Сделано (change `web-sso`, в Goden - `migom-web-client`): кабинеты входят перенаправлением на Keycloak (клиент `migom-web`, PKCE, тема Goden), формы входа и регистрации удалены, новый пользователь регистрируется на странице Keycloak и при первом входе выбирает роль (`POST /auth/session`). Старая учётная запись Мигома связывается со входом только по подтверждённой почте. Мобильные приложения остаются на входе по паролю. Ниже - исходный план.
+
 | Где | Что сделать |
 |---|---|
 | `frontend/owner_web/src/features/auth/api/authApi.ts` | вход перенаправлением на Keycloak с PKCE вместо формы; образец - `frontend/src/shared/auth` в Goden |

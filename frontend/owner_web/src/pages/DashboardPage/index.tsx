@@ -237,8 +237,7 @@ export default function DashboardPage() {
 	];
 
 	const handleLogout = () => {
-		logout();
-		void navigate('/auth', { replace: true });
+		logout();
 	};
 
 	const latestOrders = recentOrders?.items ?? [];

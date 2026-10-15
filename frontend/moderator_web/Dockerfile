@@ -8,7 +8,9 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 # Vite подставляет VITE_API_URL при сборке: адрес API вшивается в бандл
 ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
+# Keycloak Goden для единого входа; без аргумента - локальный http://localhost:8180
+ARG VITE_KEYCLOAK_URL
+ENV VITE_API_URL=$VITE_API_URL VITE_KEYCLOAK_URL=$VITE_KEYCLOAK_URL
 RUN pnpm build
 
 FROM caddy:2.10-alpine

@@ -16,7 +16,7 @@ import {
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useSearchParams } from 'react-router';
 import { useAuthGuard, useAuthStore } from '@features/auth';
 import {
 	useOrganizationGuard,
@@ -45,8 +45,7 @@ function clampLimit(v: number) {
 export default function OrdersPage() {
 	useAuthGuard();
 	useOrganizationGuard();
-
-	const navigate = useNavigate();
+
 	const logout = useAuthStore((s) => s.logout);
 	const companyId = useOrganizationStore((s) => s.companyId);
 	const { data: org } = useOrganization(companyId);
@@ -99,8 +98,7 @@ export default function OrdersPage() {
 	};
 
 	const handleLogout = () => {
-		logout();
-		void navigate('/auth', { replace: true });
+		logout();
 	};
 
 	const orders = data?.items ?? [];
