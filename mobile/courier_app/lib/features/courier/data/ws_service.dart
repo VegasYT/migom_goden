@@ -25,6 +25,10 @@ class WsService {
   }
 
   Future<void> _doConnect() async {
+    // access-токен живёт 15 минут: запрос через dio обновит истёкший токен до подключения
+    try {
+      await ApiClient.instance.dio.get('/couriers/me');
+    } catch (_) {}
     final token = await ApiClient.instance.getAccessToken();
     if (token == null) return;
 
