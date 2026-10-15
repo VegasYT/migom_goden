@@ -1,4 +1,4 @@
-from app.core.cache import cache_delete, cache_get, cache_set
+from app.core.cache import cache_delete_pattern, cache_get, cache_set
 from app.modules.companies.exceptions import (
     CompanyAccessDeniedError,
     CompanyBlockedError,
@@ -13,7 +13,9 @@ from app.modules.companies.schemas import (
 )
 from app.modules.users.models import User
 
-_CACHE_KEY = "companies:list"
+# своя запись на каждую страницу: иначе страница с limit=1 подменяла бы весь список
+_CACHE_KEY = "companies:list:{offset}:{limit}"
+_CACHE_PATTERN = "companies:list:*"
 _CACHE_TTL = 300  # 5 минут
 
 
@@ -27,7 +29,7 @@ class CompanyService:
             name=data.name,
             description=data.description,
         )
-        await cache_delete(_CACHE_KEY)
+        await cache_delete_pattern(_CACHE_PATTERN)
         return CompanyResponse.model_validate(company)
 
     async def get_by_id(self, company_id: int) -> CompanyResponse:
@@ -41,7 +43,7 @@ class CompanyService:
     ) -> CompanyListResponse:
         # Кэш только без поиска
         if not search:
-            cached = await cache_get(_CACHE_KEY)
+            cached = await cache_get(_CACHE_KEY.format(offset=offset, limit=limit))
             if cached:
                 return CompanyListResponse(**cached)
 
@@ -51,7 +53,7 @@ class CompanyService:
             total=total,
         )
         if not search:
-            await cache_set(_CACHE_KEY, response.model_dump(mode="json"), ttl=_CACHE_TTL)
+            await cache_set(_CACHE_KEY.format(offset=offset, limit=limit), response.model_dump(mode="json"), ttl=_CACHE_TTL)
         return response
 
     async def get_my_companies(self, current_user: User) -> list[CompanyResponse]:
@@ -72,7 +74,7 @@ class CompanyService:
             description=data.description,
             is_active=data.is_active,
         )
-        await cache_delete(_CACHE_KEY)
+        await cache_delete_pattern(_CACHE_PATTERN)
         return CompanyResponse.model_validate(updated)
 
     async def delete(self, company_id: int, current_user: User) -> None:
@@ -82,7 +84,7 @@ class CompanyService:
         self._check_owner_or_admin(company, current_user)
 
         await self._repo.delete(company)
-        await cache_delete(_CACHE_KEY)
+        await cache_delete_pattern(_CACHE_PATTERN)
 
     async def block(self, company_id: int, current_user: User) -> CompanyResponse:
         """Только moderator."""
@@ -94,7 +96,7 @@ class CompanyService:
             raise CompanyNotFoundError()
 
         updated = await self._repo.update(company, is_blocked=True)
-        await cache_delete(_CACHE_KEY)
+        await cache_delete_pattern(_CACHE_PATTERN)
         return CompanyResponse.model_validate(updated)
 
     async def unblock(self, company_id: int, current_user: User) -> CompanyResponse:
@@ -107,7 +109,7 @@ class CompanyService:
             raise CompanyNotFoundError()
 
         updated = await self._repo.update(company, is_blocked=False)
-        await cache_delete(_CACHE_KEY)
+        await cache_delete_pattern(_CACHE_PATTERN)
         return CompanyResponse.model_validate(updated)
 
     def _check_owner_or_admin(self, company, current_user: User) -> None:

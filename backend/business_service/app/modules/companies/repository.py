@@ -23,7 +23,7 @@ class CompanyRepository:
     async def list_all(
         self, offset: int = 0, limit: int = 20, search: str | None = None
     ) -> tuple[list[Company], int]:
-        query = select(Company)
+        query = select(Company).order_by(Company.id)
         if search:
             query = query.where(Company.name.ilike(f"%{search}%"))
 
