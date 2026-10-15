@@ -74,6 +74,8 @@ OpenSpec change `keycloak-auth` в Мигоме, клиенты realm - change `
 
 ## 6. Попутно замеченное
 
+Позиция курьера, ключ MapKit и адрес API мобильных приложений исправлены (change `courier-tracking`); там же активный заказ курьера стал включать статусы сборки и ожидания выдачи.
+
 - `backend/realtime_service/internal/hub/hub.go:179`: событие `courier.location_updated` маршрутизируется по `customer_id`, а в полезной нагрузке (`delivery_service`, `couriers/service.py:103`) его нет - позиция курьера, судя по коду, не доходит до покупателя.
 - `mobile/courier_app/android/app/src/main/kotlin/com/migom/courier_app/MainApplication.kt`: ключ Яндекс MapKit записан в коде открытым текстом.
 - `mobile/customer_app/lib/core/api/api_client.dart:4`, `mobile/courier_app/lib/core/api/api_client.dart:4`: адрес API зашит (ngrok); вынести в `--dart-define`.

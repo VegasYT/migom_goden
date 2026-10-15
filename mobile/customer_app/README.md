@@ -2,6 +2,15 @@
 
 A new Flutter project.
 
+## Сборка
+
+По умолчанию приложение работает с API на сервере `https://migom.site/api/v1`, WebSocket - `wss://migom.site/ws`. Другой адрес задаётся при сборке:
+
+```bash
+flutter run --dart-define=API_URL=http://10.0.2.2/api/v1    # локальный стек из эмулятора Android
+flutter build apk --release                                   # для сервера, адрес по умолчанию
+```
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.

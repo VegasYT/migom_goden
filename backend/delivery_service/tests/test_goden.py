@@ -1,22 +1,12 @@
 """Клиент заказов Goden без сети: Keycloak и Goden подменяет httpx.MockTransport."""
 import asyncio
 import json
-import os
 import uuid
 
-# настройки читаются при импорте app.config; тесту база не нужна
-os.environ.update({
-    "DB_HOST": "-", "DB_NAME": "-", "DB_USER": "-", "DB_PASSWORD": "-",
-    "KEYCLOAK_REALM_URL": "http://keycloak/realms/goden",
-    "KEYCLOAK_ISSUER": "http://localhost:8180/realms/goden",
-    "GODEN_API_URL": "http://goden/api/v1",
-    "GODEN_CLIENT_SECRET": "integration-secret",
-})
+import httpx
+import pytest
 
-import httpx  # noqa: E402
-import pytest  # noqa: E402
-
-from app.core import goden  # noqa: E402
+from app.core import goden
 
 POINT = uuid.UUID("0198c0de-0000-7000-8000-000000000012")
 DISH = uuid.UUID("0198c0de-0000-7000-8000-0000000000d1")

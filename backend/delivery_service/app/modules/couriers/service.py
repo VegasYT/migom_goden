@@ -12,6 +12,7 @@ from app.modules.couriers.exceptions import (
     CourierNotFoundError,
 )
 from app.modules.couriers.repository import CourierRepository
+from app.modules.orders.repository import OrderRepository
 from app.modules.couriers.schemas import (
     CourierListResponse,
     CourierProfileUpdate,
@@ -29,9 +30,11 @@ def _courier_state_key(courier_id: int) -> str:
 
 
 class CourierService:
-    def __init__(self, repo: CourierRepository, redis: Redis) -> None:
+    def __init__(self, repo: CourierRepository, redis: Redis, orders: OrderRepository) -> None:
         self._repo = repo
         self._redis = redis
+        # заказы нужны для позиции курьера: событие называет покупателя его заказа
+        self._orders = orders
 
     async def get_my_profile(self, current_user: TokenData) -> CourierResponse:
         """Возвращает профиль курьера. Создаёт запись если не существует (lazy init)."""
@@ -89,23 +92,24 @@ class CourierService:
 
         await self._repo.update_location(courier, data.latitude, data.longitude)
 
-        state = {
-            "courier_id": courier.id,
-            "latitude": data.latitude,
-            "longitude": data.longitude,
-        }
-        await self._redis.setex(
-            _courier_state_key(courier.id),
-            _COURIER_STATE_TTL,
-            json.dumps(state),
-        )
+        # в состоянии курьера лежат и признаки смены и заказа: координаты дописываются, а не заменяют их
+        key = _courier_state_key(courier.id)
+        raw = await self._redis.get(key)
+        state = json.loads(raw) if raw else {}
+        state.update(courier_id=courier.id, latitude=data.latitude, longitude=data.longitude)
+        await self._redis.setex(key, _COURIER_STATE_TTL, json.dumps(state))
 
-        await kafka.publish_event("courier.location_updated", {
+        event = {
             "courier_id": courier.id,
             "user_id": current_user.user_id,
             "latitude": data.latitude,
             "longitude": data.longitude,
-        })
+        }
+        # realtime отправляет позицию покупателю активного заказа курьера
+        order = await self._orders.get_active_by_courier(courier.id)
+        if order:
+            event.update(order_id=order.id, customer_id=order.customer_id)
+        await kafka.publish_event("courier.location_updated", event)
 
         return {"status": "ok", "latitude": data.latitude, "longitude": data.longitude}
 

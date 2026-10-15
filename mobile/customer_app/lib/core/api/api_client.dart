@@ -1,7 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-const String kBaseUrl = 'https://shawnna-polyatomic-pseudocritically.ngrok-free.dev/api/v1';
+// адрес API задаётся при сборке: flutter run --dart-define=API_URL=http://10.0.2.2/api/v1
+const String kBaseUrl = String.fromEnvironment('API_URL', defaultValue: 'https://migom.site/api/v1');
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();

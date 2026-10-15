@@ -1,9 +1,18 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Ключ Яндекс MapKit: mapkit.apiKey в android/local.properties (файл не входит в репозиторий)
+// или переменная окружения MAPKIT_API_KEY при сборке
+val localProperties = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+val mapkitApiKey = localProperties.getProperty("mapkit.apiKey") ?: System.getenv("MAPKIT_API_KEY") ?: ""
 
 android {
     namespace = "com.migom.courier_app"
@@ -29,6 +38,11 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        buildConfigField("String", "MAPKIT_API_KEY", "\"$mapkitApiKey\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {

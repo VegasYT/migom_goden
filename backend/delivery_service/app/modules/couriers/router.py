@@ -13,6 +13,7 @@ from app.modules.couriers.schemas import (
     LocationUpdate,
 )
 from app.modules.couriers.service import CourierService
+from app.modules.orders.repository import OrderRepository
 
 router = APIRouter(tags=["Курьеры"])
 
@@ -21,6 +22,7 @@ def _get_service(request: Request, session: Annotated[AsyncSession, Depends(get_
     return CourierService(
         repo=CourierRepository(session),
         redis=request.app.state.redis,
+        orders=OrderRepository(session),
     )
 
 

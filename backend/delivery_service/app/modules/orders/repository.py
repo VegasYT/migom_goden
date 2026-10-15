@@ -132,13 +132,15 @@ class OrderRepository:
         return list(result.scalars().all()), total or 0
 
     async def get_active_by_courier(self, courier_id: int) -> Order | None:
-        """Текущий активный заказ курьера."""
+        """Текущий активный заказ курьера: от принятия до доставки, в том числе пока его собирают."""
         result = await self._session.execute(
             select(Order)
             .options(selectinload(Order.items), selectinload(Order.status_history))
             .where(
                 Order.courier_id == courier_id,
-                Order.status.in_([OrderStatus.assigned, OrderStatus.in_delivery]),
+                Order.status.in_([
+                    OrderStatus.assigned, OrderStatus.assembling, OrderStatus.ready_for_pickup, OrderStatus.in_delivery,
+                ]),
             )
         )
         return result.scalar_one_or_none()
