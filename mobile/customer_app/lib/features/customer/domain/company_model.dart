@@ -18,7 +18,7 @@ class CompanyModel {
       id: json['id'] as int,
       name: json['name'] as String? ?? '',
       description: json['description'] as String?,
-      logoUrl: json['logo_url'] as String?,
+      logoUrl: json['cover_url'] as String?,
       isActive: json['is_active'] as bool? ?? true,
     );
   }
