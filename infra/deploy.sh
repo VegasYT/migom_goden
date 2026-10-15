@@ -20,6 +20,8 @@ compose="docker compose -f infra/compose.prod.yaml"
 $compose build migom-owner-web
 $compose build migom-admin-web
 $compose up -d --build --remove-orphans
+# nginx узнаёт адреса сервисов только при загрузке конфига: пересозданный сервис получает новый IP
+$compose exec -T migom-nginx nginx -s reload
 # старые слои после пересборки, иначе диск сервера заполнится
 docker image prune --force > /dev/null
 git log --oneline -1
