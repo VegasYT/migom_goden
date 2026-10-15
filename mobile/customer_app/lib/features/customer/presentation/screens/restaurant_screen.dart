@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../domain/company_model.dart';
 import '../providers/cart_provider.dart';
+import '../providers/companies_provider.dart';
 import '../providers/restaurant_menu_provider.dart';
 import '../widgets/restaurant/restaurant_cart_bar.dart';
 import 'home_screen.dart';
@@ -24,6 +25,8 @@ class RestaurantScreen extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return menuAsync.when(
+      // при обновлении свайпом меню остаётся на экране
+      skipLoadingOnReload: true,
       loading: () => Scaffold(
         backgroundColor: colorScheme.surface,
         body: const Center(child: CircularProgressIndicator()),
@@ -33,10 +36,8 @@ class RestaurantScreen extends ConsumerWidget {
         appBar: AppBar(),
         body: Center(child: Text(e.toString())),
       ),
-      data: (menu) => _RestaurantContent(
-        restaurantId: restaurantId,
-        menu: menu,
-      ),
+      data: (menu) =>
+          _RestaurantContent(restaurantId: restaurantId, menu: menu),
     );
   }
 }
@@ -64,6 +65,19 @@ class _RestaurantContentState extends ConsumerState<_RestaurantContent> {
       List.generate(widget.menu.categories.length, (_) => GlobalKey()),
     );
     _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void didUpdateWidget(covariant _RestaurantContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // после обновления категорий может стать больше или меньше ("Рекомендуем")
+    final count = widget.menu.categories.length;
+    if (_categoryKeys.length != count) {
+      _categoryKeys
+        ..clear()
+        ..addAll(List.generate(count, (_) => GlobalKey()));
+      _activeCategoryIndex = 0;
+    }
   }
 
   @override
@@ -115,10 +129,9 @@ class _RestaurantContentState extends ConsumerState<_RestaurantContent> {
           if (item.quantity <= 1) {
             await ref.read(cartProvider.notifier).removeItem(item.id);
           } else {
-            await ref.read(cartProvider.notifier).updateItem(
-              itemId: item.id,
-              quantity: item.quantity - 1,
-            );
+            await ref
+                .read(cartProvider.notifier)
+                .updateItem(itemId: item.id, quantity: item.quantity - 1);
           }
           return;
         }
@@ -133,7 +146,9 @@ class _RestaurantContentState extends ConsumerState<_RestaurantContent> {
       final companyCart = cart.carts.firstWhere(
         (c) => c.companyId == widget.restaurantId,
       );
-      return {for (final item in companyCart.items) item.catalogItemId: item.quantity};
+      return {
+        for (final item in companyCart.items) item.catalogItemId: item.quantity,
+      };
     } catch (_) {
       return {};
     }
@@ -145,74 +160,82 @@ class _RestaurantContentState extends ConsumerState<_RestaurantContent> {
     final menu = widget.menu;
     final cartAsync = ref.watch(cartProvider);
     final cartMap = _buildCartMap();
-    final cartCount = cartAsync.valueOrNull?.carts
-        .where((c) => c.companyId == widget.restaurantId)
-        .fold<int>(0, (sum, c) => sum + c.totalItems) ?? 0;
-    final cartTotal = cartAsync.valueOrNull?.carts
-        .where((c) => c.companyId == widget.restaurantId)
-        .fold<double>(0, (sum, c) => sum + c.total) ?? 0;
+    final cartCount =
+        cartAsync.valueOrNull?.carts
+            .where((c) => c.companyId == widget.restaurantId)
+            .fold<int>(0, (sum, c) => sum + c.totalItems) ??
+        0;
+    final cartTotal =
+        cartAsync.valueOrNull?.carts
+            .where((c) => c.companyId == widget.restaurantId)
+            .fold<double>(0, (sum, c) => sum + c.total) ??
+        0;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: Stack(
         children: [
-          CustomScrollView(
-            controller: _scrollController,
-            slivers: [
-              SliverAppBar(
-                expandedHeight: 240,
-                pinned: true,
-                backgroundColor: colorScheme.surface,
-                surfaceTintColor: Colors.transparent,
-                leading: RestaurantCircleIconButton(
-                  icon: Icons.arrow_back_ios_new_rounded,
-                  onTap: () => Navigator.of(context).pop(),
-                ),
-                actions: [
-                  RestaurantCircleIconButton(
-                    icon: Icons.favorite_border_rounded,
-                    onTap: () {},
-                  ),
-                  RestaurantCircleIconButton(
-                    icon: Icons.share_rounded,
-                    onTap: () {},
-                  ),
-                  const SizedBox(width: 4),
-                ],
-                flexibleSpace: FlexibleSpaceBar(
-                  background: RestaurantCoverImage(
-                    url: menu.logoUrl ?? '',
-                  ),
-                ),
-                title: AnimatedOpacity(
-                  opacity: _headerCollapsed ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Text(
-                    menu.companyName,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
-
-              SliverToBoxAdapter(child: RestaurantInfo(menu: menu)),
-
-              if (menu.categories.isNotEmpty)
-                SliverPersistentHeader(
+          RefreshIndicator(
+            onRefresh: () async {
+              await refreshCompanies(ref);
+              await ref.read(
+                restaurantMenuProvider(widget.restaurantId).future,
+              );
+            },
+            child: CustomScrollView(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverAppBar(
+                  expandedHeight: 240,
                   pinned: true,
-                  delegate: RestaurantCategoryBarDelegate(
-                    categories: menu.categories,
-                    activeIndex: _activeCategoryIndex,
-                    scrollController: _categoryScrollController,
-                    onCategoryTap: _scrollToCategory,
+                  backgroundColor: colorScheme.surface,
+                  surfaceTintColor: Colors.transparent,
+                  leading: RestaurantCircleIconButton(
+                    icon: Icons.arrow_back_ios_new_rounded,
+                    onTap: () => Navigator.of(context).pop(),
+                  ),
+                  actions: [
+                    RestaurantCircleIconButton(
+                      icon: Icons.favorite_border_rounded,
+                      onTap: () {},
+                    ),
+                    RestaurantCircleIconButton(
+                      icon: Icons.share_rounded,
+                      onTap: () {},
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: RestaurantCoverImage(url: menu.logoUrl ?? ''),
+                  ),
+                  title: AnimatedOpacity(
+                    opacity: _headerCollapsed ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Text(
+                      menu.companyName,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
 
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, catIndex) {
+                SliverToBoxAdapter(child: RestaurantInfo(menu: menu)),
+
+                if (menu.categories.isNotEmpty)
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: RestaurantCategoryBarDelegate(
+                      categories: menu.categories,
+                      activeIndex: _activeCategoryIndex,
+                      scrollController: _categoryScrollController,
+                      onCategoryTap: _scrollToCategory,
+                    ),
+                  ),
+
+                SliverList(
+                  delegate: SliverChildBuilderDelegate((context, catIndex) {
                     final category = menu.categories[catIndex];
                     return RestaurantMenuSection(
                       key: _categoryKeys[catIndex],
@@ -222,19 +245,18 @@ class _RestaurantContentState extends ConsumerState<_RestaurantContent> {
                       onAdd: _addToCart,
                       onRemove: _removeFromCart,
                     );
-                  },
-                  childCount: menu.categories.length,
+                  }, childCount: menu.categories.length),
                 ),
-              ),
 
-              const SliverToBoxAdapter(
-                child: RestaurantReviewsSection(reviews: [], rating: 0),
-              ),
+                const SliverToBoxAdapter(
+                  child: RestaurantReviewsSection(reviews: [], rating: 0),
+                ),
 
-              SliverToBoxAdapter(
-                child: SizedBox(height: cartCount > 0 ? 80 : 24),
-              ),
-            ],
+                SliverToBoxAdapter(
+                  child: SizedBox(height: cartCount > 0 ? 80 : 24),
+                ),
+              ],
+            ),
           ),
 
           if (cartCount > 0)

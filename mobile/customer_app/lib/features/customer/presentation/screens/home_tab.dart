@@ -20,88 +20,94 @@ class HomeTab extends ConsumerWidget {
     final unread = ref.watch(unreadCountProvider);
     final companiesAsync = ref.watch(companiesProvider);
 
-    return CustomScrollView(
-      slivers: [
-        SliverAppBar(
-          floating: true,
-          snap: true,
-          backgroundColor: colorScheme.surface,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          titleSpacing: 16,
-          title: const DeliveryAddressBar(),
-          actions: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.notifications_none_rounded),
-                  onPressed: () => _openNotifications(context),
-                ),
-                if (unread > 0)
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: colorScheme.error,
-                        shape: BoxShape.circle,
-                        border:
-                            Border.all(color: colorScheme.surface, width: 1.5),
+    return RefreshIndicator(
+      onRefresh: () => refreshCompanies(ref),
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            floating: true,
+            snap: true,
+            backgroundColor: colorScheme.surface,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            titleSpacing: 16,
+            title: const DeliveryAddressBar(),
+            actions: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_none_rounded),
+                    onPressed: () => _openNotifications(context),
+                  ),
+                  if (unread > 0)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: colorScheme.error,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: colorScheme.surface,
+                            width: 1.5,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 4),
-          ],
-        ),
-
-        SliverToBoxAdapter(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: HomeSearchBar(),
+                ],
               ),
-              const PromoBannerCarousel(),
-              const SizedBox(height: 20),
-              const CategoryChips(),
-              const SizedBox(height: 24),
-              SectionHeader(
-                title: '🍽️ Все заведения',
-                actionLabel: 'Все',
-                onAction: () {},
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(width: 4),
             ],
           ),
-        ),
 
-        companiesAsync.when(
-          loading: () => const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: HomeSearchBar(),
+                ),
+                const PromoBannerCarousel(),
+                const SizedBox(height: 20),
+                const CategoryChips(),
+                const SizedBox(height: 24),
+                SectionHeader(
+                  title: '🍽️ Все заведения',
+                  actionLabel: 'Все',
+                  onAction: () {},
+                ),
+                const SizedBox(height: 12),
+              ],
             ),
           ),
-          error: (e, _) => SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: _ErrorCard(
-                message: e.toString(),
-                onRetry: () => ref.invalidate(companiesProvider),
+
+          companiesAsync.when(
+            loading: () => const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator()),
               ),
             ),
+            error: (e, _) => SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: _ErrorCard(
+                  message: e.toString(),
+                  onRetry: () => ref.invalidate(companiesProvider),
+                ),
+              ),
+            ),
+            data: (companies) => _CompaniesSliver(companies: companies),
           ),
-          data: (companies) => _CompaniesSliver(companies: companies),
-        ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 24)),
-      ],
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
+      ),
     );
   }
 
@@ -131,9 +137,7 @@ class _CompaniesSliver extends StatelessWidget {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, i) => Padding(
-          padding: EdgeInsets.only(
-            bottom: i < companies.length - 1 ? 12 : 0,
-          ),
+          padding: EdgeInsets.only(bottom: i < companies.length - 1 ? 12 : 0),
           child: CompanyCard(company: companies[i]),
         ),
         childCount: companies.length,
@@ -158,8 +162,7 @@ class _ErrorCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(message,
-              style: TextStyle(color: colorScheme.onErrorContainer)),
+          Text(message, style: TextStyle(color: colorScheme.onErrorContainer)),
           const SizedBox(height: 8),
           TextButton(onPressed: onRetry, child: const Text('Повторить')),
         ],

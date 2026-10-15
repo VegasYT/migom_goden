@@ -10,6 +10,15 @@ final companiesProvider = FutureProvider<List<CompanyModel>>((ref) async {
   return ref.watch(companiesServiceProvider).getCompanies();
 });
 
+/// Свежие заведения, их точки и меню: свайп вниз на главной и в ресторане.
+Future<void> refreshCompanies(WidgetRef ref) async {
+  ref.invalidate(companiesProvider);
+  ref.invalidate(companyMenuProvider);
+  ref.invalidate(outletMenuProvider);
+  ref.invalidate(companyOutletsProvider);
+  await ref.read(companiesProvider.future);
+}
+
 final companyMenuProvider =
     FutureProvider.family<CompanyMenu, int>((ref, companyId) async {
   return ref.watch(companiesServiceProvider).getCompanyMenu(companyId);
