@@ -8,6 +8,7 @@ from decimal import Decimal
 
 from redis.asyncio import Redis
 
+from app.config import settings
 from app.core import goden, kafka
 from app.core.dependencies import TokenData
 from app.modules.cart.repository import CartRepository, CatalogReadRepository
@@ -51,7 +52,6 @@ _COURIER_STATE_TTL = 1800
 _COURIER_STATE_KEY = "courier:{courier_id}:state"
 
 # Параметры доставки платформы
-_DELIVERY_RADIUS_KM = 8       # максимальный радиус доставки
 _FREE_DELIVERY_UP_TO_KM = 2   # до этого расстояния - только сбор точки
 _PRICE_PER_KM = Decimal("25") # надбавка за каждый км сверх порога
 
@@ -109,7 +109,7 @@ class OrderService:
             distance_km = await self._outlets.get_distance_km(
                 data.outlet_id, float(address.latitude), float(address.longitude)
             )
-            if distance_km is None or distance_km > _DELIVERY_RADIUS_KM:
+            if distance_km is None or distance_km > settings.delivery_radius_km:
                 raise DeliveryZoneError()
             delivery_fee = self._calc_delivery_fee(outlet, distance_km)
 

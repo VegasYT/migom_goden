@@ -105,6 +105,7 @@ services:
       <<: *backend-env
       # Kafka Goden: внутренний слушатель брокера в сети Goden
       KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      DELIVERY_RADIUS_KM: ${DELIVERY_RADIUS_KM:-8}
     networks: [default, goden]
 
   realtime_service:

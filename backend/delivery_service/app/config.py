@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     goden_client_id: str = "migom-integration"
     goden_client_secret: str
 
+    # максимальное расстояние от точки до адреса доставки, км
+    delivery_radius_km: float = 8
+
     @property
     def db_url(self) -> str:
         return (
