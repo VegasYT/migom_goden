@@ -1,0 +1,158 @@
+# Мигом на сервере Goden (migom.site). Запуск: sh infra/deploy.sh, секреты - в infra/.env по .env.example.
+#
+# Мигом живёт рядом с Goden и подключается к его сети goden-prod_default: снаружи его открывает
+# Caddy Goden (migom.site, owner. и admin.), Kafka общая с Goden, Keycloak и API Goden - внутри сети.
+# Свои база, Redis и MinIO остаются только в сети Мигома. Имена сервисов в общей сети не должны
+# совпадать с сервисами Goden (postgres, redis, kafka, api...), поэтому у своих - префикс migom-.
+name: migom-prod
+
+x-restart: &restart
+  restart: unless-stopped
+
+x-backend-env: &backend-env
+  APP_ENV: production
+  DB_HOST: migom-postgres
+  DB_NAME: migom
+  DB_USER: migom
+  DB_PASSWORD: ${POSTGRES_PASSWORD:?задай POSTGRES_PASSWORD в infra/.env}
+  REDIS_HOST: migom-redis
+  # Keycloak Goden: в общей сети его адрес ведёт на Caddy Goden, издатель в токене тот же
+  KEYCLOAK_REALM_URL: https://auth.${GODEN_DOMAIN:-goden.pro}/realms/goden
+  KEYCLOAK_ISSUER: https://auth.${GODEN_DOMAIN:-goden.pro}/realms/goden
+  GODEN_API_URL: http://api:8080/api/v1
+  GODEN_CLIENT_SECRET: ${MIGOM_INTEGRATION_SECRET:?задай MIGOM_INTEGRATION_SECRET в infra/.env}
+
+services:
+  migom-postgres:
+    <<: *restart
+    image: postgis/postgis:17-3.5-alpine
+    environment:
+      POSTGRES_DB: migom
+      POSTGRES_USER: migom
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задай POSTGRES_PASSWORD в infra/.env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U migom -d migom"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  migom-redis:
+    <<: *restart
+    image: redis:7-alpine
+    # истечение ключей предложений курьеру приходит событием
+    command: redis-server --notify-keyspace-events Ex
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  migom-minio:
+    <<: *restart
+    image: minio/minio:latest
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: migom
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:?задай MINIO_PASSWORD в infra/.env}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - default
+      # фото товаров Caddy Goden отдаёт напрямую из бакета: https://migom.site/migom-media/...
+      - goden
+
+  business_service:
+    <<: *restart
+    build: ../backend/business_service
+    depends_on:
+      migom-postgres:
+        condition: service_healthy
+      migom-redis:
+        condition: service_healthy
+      migom-minio:
+        condition: service_healthy
+    environment:
+      <<: *backend-env
+      KEYCLOAK_CLIENT_SECRET: ${MIGOM_BACKEND_SECRET:?задай MIGOM_BACKEND_SECRET в infra/.env}
+      MINIO_ENDPOINT: migom-minio:9000
+      MINIO_ACCESS_KEY: migom
+      MINIO_SECRET_KEY: ${MINIO_PASSWORD:?задай MINIO_PASSWORD в infra/.env}
+      MINIO_PUBLIC_ENDPOINT: https://${MIGOM_DOMAIN:-migom.site}
+    networks: [default, goden]
+
+  delivery_service:
+    <<: *restart
+    build: ../backend/delivery_service
+    depends_on:
+      migom-postgres:
+        condition: service_healthy
+      migom-redis:
+        condition: service_healthy
+      # таблицы заказов ссылаются на таблицы business_service, его миграции идут первыми
+      business_service:
+        condition: service_started
+    environment:
+      <<: *backend-env
+      # Kafka Goden: внутренний слушатель брокера в сети Goden
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+    networks: [default, goden]
+
+  realtime_service:
+    <<: *restart
+    build: ../backend/realtime_service
+    environment:
+      BUSINESS_URL: http://business_service:8000
+      KAFKA_BROKERS: kafka:19092
+      KAFKA_GROUP_ID: migom_realtime_service
+    networks: [default, goden]
+
+  # API и WebSocket для мобильных приложений и кабинетов; снаружи - через Caddy Goden
+  migom-nginx:
+    <<: *restart
+    image: nginx:1.25-alpine
+    depends_on:
+      - business_service
+      - delivery_service
+      - realtime_service
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/proxy_params.conf:/etc/nginx/proxy_params.conf:ro
+      - ./nginx/ws_params.conf:/etc/nginx/ws_params.conf:ro
+    networks: [default, goden]
+
+  migom-owner-web:
+    <<: *restart
+    build:
+      context: ../frontend/owner_web
+      args:
+        VITE_API_URL: https://${MIGOM_DOMAIN:-migom.site}
+        VITE_YANDEX_MAPS_API_KEY: ${YANDEX_MAPS_API_KEY:-}
+    networks: [goden]
+
+  migom-admin-web:
+    <<: *restart
+    build:
+      context: ../frontend/moderator_web
+      args:
+        VITE_API_URL: https://${MIGOM_DOMAIN:-migom.site}
+    networks: [goden]
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+
+networks:
+  # сеть Goden: в ней Caddy, Keycloak, API и Kafka Goden; создаёт её выкладка Goden
+  goden:
+    external: true
+    name: goden-prod_default

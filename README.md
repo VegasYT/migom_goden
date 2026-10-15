@@ -97,6 +97,34 @@ docker compose up -d --build
 
 Заведения, подключённые к точке Goden, берут наличие и оформляют заказы через API Goden (`GODEN_API_URL` в `.env` business_service и delivery_service, сервисная учётная запись `migom-integration`, см. `.env.example`). Для них нужен запущенный API Goden на `localhost:8080`; заведения без Goden работают и без него.
 
+## Выкладка на сервер
+
+Мигом работает на сервере Goden (`84.54.59.138`) рядом с ним: `infra/compose.prod.yaml` подключается к сети Goden `goden-prod_default`, Kafka общая, Keycloak и API Goden - внутри сети, наружу Мигом открывает Caddy Goden (адреса и DNS - `infra/README.md` в репозитории Goden).
+
+| Адрес | Что отвечает |
+| --- | --- |
+| `https://migom.site/api/v1`, `wss://migom.site/ws` | API и WebSocket для мобильных приложений |
+| `https://owner.migom.site` | кабинет владельца |
+| `https://admin.migom.site` | кабинет модератора |
+
+Пуш в `master` прогоняет тесты business_service и delivery_service и выполняет на сервере `infra/deploy.sh` (секреты репозитория `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS` - как у Goden, `DEPLOY_PATH` - папка Мигома). Выкладки Goden и Мигома идут по очереди. Вручную на сервере: `sh infra/deploy.sh`.
+
+Первый запуск (Goden уже выложен, в его `infra/.env` заданы `MIGOM_BACKEND_SECRET` и `MIGOM_INTEGRATION_SECRET`):
+
+```bash
+git clone https://github.com/VegasYT/migom_goden.git ~/migom
+cd ~/migom
+cp infra/.env.example infra/.env
+nano infra/.env          # пароли и те же секреты MIGOM_*, что в infra/.env Goden
+sh infra/deploy.sh
+```
+
+Роли заводит миграция. Модератора назначают после его регистрации:
+
+```bash
+docker compose -f infra/compose.prod.yaml exec migom-postgres   psql -U migom -d migom -c "UPDATE users SET role_id = 4 WHERE email = '<почта>'"
+```
+
 ## Локальные порты
 
 | Сервис | Порт |
@@ -126,13 +154,7 @@ docker compose up -d --build
 ```sql
 BEGIN;
 
--- 1. Роли (обязательно, без них регистрация не работает)
-INSERT INTO roles (id, name, is_assignable) VALUES
-  (1, 'customer',       true),
-  (2, 'owner',          true),
-  (3, 'courier',        true),
-  (4, 'moderator',      false),
-  (5, 'outlet_manager', true);
+-- 1. Роли заводит миграция business_service (справочник customer, owner, courier, moderator, outlet_manager)
 
 -- 2. Категории каталога
 INSERT INTO catalog_categories (name, emoji, sort_order, is_active) VALUES

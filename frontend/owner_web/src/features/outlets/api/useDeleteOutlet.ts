@@ -6,7 +6,7 @@ import { outletsKeys } from './useOutlets';
 export function useDeleteOutlet() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: ({ companyId, outletId }: { companyId: number; outletId: number }) =>
+		mutationFn: ({ outletId }: { companyId: number; outletId: number }) =>
 			outletsApi.deleteOutlet(outletId),
 		onSuccess: (_, { companyId }) => {
 			void queryClient.invalidateQueries({ queryKey: outletsKeys.company(companyId) });

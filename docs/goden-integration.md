@@ -62,9 +62,11 @@ OpenSpec change `keycloak-auth` в Мигоме, клиенты realm - change `
 
 ## 5. Выкладка на сервер Goden (migom.site)
 
-Мигом разворачивается на том же сервере, что и Goden (`84.54.59.138`, 4 ГБ памяти, 2 ядра, swap 979 МБ), под доменом `migom.site`. По порядку:
+Сделано (change `server-deployment`, в Goden - `migom-site-proxy`): Мигом в сети Goden, Kafka общая, свои PostgreSQL с PostGIS, Redis и MinIO, адреса `migom.site`, `owner.` и `admin.` через Caddy Goden, выкладка `infra/deploy.sh` и GitHub Actions, порядок первого запуска - README в корне. Ниже - исходный план.
 
-1. **Перед выкладкой расширить swap до 4 ГБ.** При выкладках Goden свободной памяти оставалось 200-400 МБ, swap был занят больше чем наполовину; Мигом добавит ещё PostgreSQL, Redis, Kafka, MinIO, три сервиса и nginx. Команды выполняет пользователь в своём терминале на сервере (нужен `sudo`).
+Мигом разворачивается на том же сервере, что и Goden (`84.54.59.138`, 4 ГБ памяти, 2 ядра), под доменом `migom.site`. По порядку:
+
+1. **Перед выкладкой расширить swap до 4 ГБ** - сделано (4051 МБ). При выкладках Goden свободной памяти оставалось 200-400 МБ, swap был занят больше чем наполовину; Мигом добавит ещё PostgreSQL, Redis, Kafka, MinIO, три сервиса и nginx. Команды выполняет пользователь в своём терминале на сервере (нужен `sudo`).
 2. Решить, какие сервисы Мигома делить с Goden: отдельный Kafka - сотни мегабайт; PostgreSQL Goden без PostGIS, а Мигому PostGIS нужен. Если памяти после swap всё равно мало - сервер побольше.
 3. Порт 80 на сервере занят прокси Goden (Caddy): nginx Мигома наружу не публикуется, `migom.site` подключается через Caddy Goden.
 4. Клиенты Мигома в Keycloak сервера: файл realm на сервере применяется только при первом создании тома, поэтому `migom-api` и `migom-backend` заводит `infra/keycloak/configure.sh` Goden, секрет - `MIGOM_BACKEND_SECRET` в `infra/.env` Goden.

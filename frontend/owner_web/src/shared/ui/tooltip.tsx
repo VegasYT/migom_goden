@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Tooltip as MuiTooltip, type TooltipProps as MuiTooltipProps } from '@mui/material';
 
-export interface TooltipProps extends Omit<MuiTooltipProps, 'title'> {
+export interface TooltipProps extends Omit<MuiTooltipProps, 'title' | 'content'> {
 	content: React.ReactNode;
 	disabled?: boolean;
 }

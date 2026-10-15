@@ -8,7 +8,6 @@ export function useUpdateOutlet() {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({
-			companyId,
 			outletId,
 			dto,
 		}: {

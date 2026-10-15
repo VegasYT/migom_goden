@@ -56,8 +56,11 @@ async def upload_photo(data: bytes, content_type: str, prefix: str = "items") ->
         content_type=content_type,
     )
 
-    # Используем публичный endpoint если задан, иначе внутренний
+    # Используем публичный endpoint если задан, иначе внутренний. Публичный адрес может
+    # нести свою схему: на сервере браузер видит https, а сервис ходит в MinIO по http
     public_host = settings.minio_public_endpoint or settings.minio_endpoint
+    if "://" in public_host:
+        return f"{public_host}/{settings.minio_bucket}/{object_name}"
     scheme = "https" if settings.minio_use_ssl else "http"
     return f"{scheme}://{public_host}/{settings.minio_bucket}/{object_name}"
 
