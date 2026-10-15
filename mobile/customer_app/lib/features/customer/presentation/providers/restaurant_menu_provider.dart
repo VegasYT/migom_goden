@@ -9,10 +9,11 @@ import 'nearest_outlet_provider.dart';
 final restaurantMenuProvider =
     FutureProvider.family<CompanyMenu, int>((ref, companyId) async {
   final company = await ref.watch(companyMenuProvider(companyId).future);
+  // обложки в меню нет: она приходит в списке компаний
+  final companies = await ref.watch(companiesProvider.future);
+  final cover = companies.where((c) => c.id == companyId).firstOrNull?.logoUrl;
   final outletId = await ref.watch(nearestOutletProvider(companyId).future);
-  if (outletId == null) return company;
-
-  final outlet = await ref.watch(outletMenuProvider(outletId).future);
+  final outlet = outletId == null ? company : await ref.watch(outletMenuProvider(outletId).future);
   final byId = {for (final item in outlet.allItems) item.id: item};
   final hot = [
     for (final id in outlet.hotItemIds)
@@ -21,7 +22,7 @@ final restaurantMenuProvider =
   return CompanyMenu(
     companyId: company.companyId,
     companyName: company.companyName,
-    logoUrl: company.logoUrl,
+    logoUrl: cover ?? company.logoUrl,
     description: company.description,
     rating: company.rating,
     reviewCount: company.reviewCount,
