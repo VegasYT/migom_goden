@@ -64,31 +64,40 @@ class _AuthInterceptor extends Interceptor {
     ErrorInterceptorHandler handler,
   ) async {
     if (err.response?.statusCode == 401) {
-      final refreshToken = await _storage.read(key: 'refresh_token');
-      if (refreshToken != null) {
+      final newAccess = await _refresh();
+      if (newAccess != null) {
+        final opts = err.requestOptions;
+        opts.headers['Authorization'] = 'Bearer $newAccess';
         try {
-          final resp = await _dio.post(
-            '/auth/refresh',
-            data: {'refresh_token': refreshToken},
-            options: Options(headers: {'Authorization': null}),
-          );
-          final newAccess = resp.data['access_token'] as String;
-          final newRefresh = resp.data['refresh_token'] as String;
-          await _storage.write(key: 'access_token', value: newAccess);
-          await _storage.write(key: 'refresh_token', value: newRefresh);
-
-          // Retry original request
-          final opts = err.requestOptions;
-          opts.headers['Authorization'] = 'Bearer $newAccess';
-          final retryResp = await _dio.fetch(opts);
-          handler.resolve(retryResp);
-          return;
-        } catch (_) {
-          await _storage.delete(key: 'access_token');
-          await _storage.delete(key: 'refresh_token');
+          handler.resolve(await _dio.fetch(opts));
+        } on DioException catch (e) {
+          // ошибка повтора (например, 404 "нет активного заказа") - ответ сервера, сессия жива
+          handler.next(e);
         }
+        return;
       }
     }
     handler.next(err);
+  }
+
+  /// Новый access-токен по refresh-токену; при отказе сессия сбрасывается.
+  Future<String?> _refresh() async {
+    final refreshToken = await _storage.read(key: 'refresh_token');
+    if (refreshToken == null) return null;
+    try {
+      final resp = await _dio.post(
+        '/auth/refresh',
+        data: {'refresh_token': refreshToken},
+        options: Options(headers: {'Authorization': null}),
+      );
+      final newAccess = resp.data['access_token'] as String;
+      await _storage.write(key: 'access_token', value: newAccess);
+      await _storage.write(key: 'refresh_token', value: resp.data['refresh_token'] as String);
+      return newAccess;
+    } catch (_) {
+      await _storage.delete(key: 'access_token');
+      await _storage.delete(key: 'refresh_token');
+      return null;
+    }
   }
 }
